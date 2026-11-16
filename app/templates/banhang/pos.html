@@ -1,0 +1,227 @@
+{% extends 'layouts/base.html' %}
+{% block title %}Bán tại quầy{% endblock %}
+{% block breadcrumb %}Bán hàng tại quầy (POS){% endblock %}
+{% block content %}
+<div class="pos-wrap">
+  <!-- Trai: quet ma + luoi san pham -->
+  <div class="d-flex flex-column" style="min-height:0">
+    <div class="input-group mb-2">
+      <span class="input-group-text bg-success text-white"><i class="bi bi-upc-scan fs-4"></i></span>
+      <input id="scan" class="form-control scan-input" placeholder="Quét mã vạch hoặc gõ tên / mã hàng rồi Enter" autocomplete="off" autofocus>
+    </div>
+    <div id="scanMsg" class="small mb-2 text-danger"></div>
+    <div class="d-flex gap-2 mb-2 overflow-auto pb-1" id="chips">
+      <button class="btn btn-success chip" data-loai="">Tất cả</button>
+      {% for l in loais %}<button class="btn btn-outline-success chip" data-loai="{{ l.id }}">{{ l.ten_loai }}</button>{% endfor %}
+    </div>
+    <div class="pos-grid flex-fill" id="grid"></div>
+  </div>
+
+  <!-- Phai: gio hang + thanh toan -->
+  <div class="card pos-cart">
+    <div class="card-body pb-2 border-bottom">
+      <div class="row g-2 mb-2">
+        <div class="col-7 position-relative">
+          <input id="khSearch" class="form-control" placeholder="Tìm KH: SĐT / tên / mã thẻ" autocomplete="off">
+          <div id="khResult" class="list-group position-absolute w-100 shadow" style="z-index:10"></div>
+        </div>
+        <div class="col-5"><select id="kho" class="form-select" title="Kho xuất bán">
+          {% for k in khos %}<option value="{{ k.id }}">{{ k.ten_kho }}</option>{% endfor %}</select></div>
+      </div>
+      <div id="khInfo" class="d-flex align-items-center gap-2">
+        <span class="badge bg-secondary fs-6">Khách lẻ</span>
+      </div>
+    </div>
+    <div class="lines px-2" id="lines"></div>
+    <div class="card-body border-top pt-2">
+      <div class="d-flex justify-content-between"><span>Tạm tính</span><b id="tamTinh">0 đ</b></div>
+      <div id="diemBox" class="d-none align-items-center gap-2 my-1">
+        <span class="text-nowrap">Dùng điểm</span>
+        <input type="number" id="diem" min="0" value="0" class="form-control form-control-sm" style="max-width:110px">
+        <button class="btn btn-sm btn-outline-success" id="dungHet">Tối đa</button>
+        <span class="ms-auto text-danger" id="giamDiem"></span>
+      </div>
+      <div class="d-flex justify-content-between align-items-center"><span class="fs-5">Khách phải trả</span>
+        <span class="pos-total" id="tong">0 đ</span></div>
+      <div class="btn-group w-100 my-2" role="group" id="httt">
+        {% for k, v in HINH_THUC_TT.items() %}
+        <input type="radio" class="btn-check" name="httt" id="tt_{{ k }}" value="{{ k }}" {{ 'checked' if loop.first }}>
+        <label class="btn btn-outline-primary" for="tt_{{ k }}">{{ v }}</label>{% endfor %}
+      </div>
+      <div id="tienMatBox">
+        <div class="input-group mb-1"><span class="input-group-text">Khách đưa</span>
+          <input type="number" id="khachDua" class="form-control form-control-lg" min="0">
+          <span class="input-group-text">Thối: <b id="tienThoi" class="ms-1">0 đ</b></span></div>
+        <div class="d-flex gap-1 flex-wrap" id="goiY"></div>
+      </div>
+      <div class="d-flex gap-2 mt-2">
+        <button class="btn btn-outline-danger btn-lg" id="huy" title="Xóa giỏ"><i class="bi bi-x-lg"></i></button>
+        <button class="btn btn-success btn-lg flex-fill fw-bold" id="thanhToan"><i class="bi bi-cash-coin"></i> THANH TOÁN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="kq" tabindex="-1" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-body text-center p-4">
+    <i class="bi bi-check-circle-fill text-success" style="font-size:4rem"></i>
+    <h4 class="mt-2">Thanh toán thành công</h4>
+    <div id="kqNoiDung" class="fs-5"></div>
+    <div class="d-flex gap-2 mt-4">
+      <a id="kqIn" class="btn btn-outline-primary btn-lg flex-fill" target="_blank"><i class="bi bi-printer"></i> In hóa đơn</a>
+      <button class="btn btn-success btn-lg flex-fill" data-bs-dismiss="modal" id="donMoi"><i class="bi bi-plus-lg"></i> Đơn mới</button>
+    </div>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const API_HH = "{{ url_for('banhang.api_hang_hoa') }}", API_KH = "{{ url_for('banhang.api_khach_hang') }}",
+      API_TT = "{{ url_for('banhang.pos_thanh_toan') }}", GIA_TRI_DIEM = {{ cfg.GIA_TRI_MOT_DIEM }};
+const $ = (id) => document.getElementById(id);
+let hangHoa = [], gio = [], kh = null, loaiChon = '';
+
+async function taiHangHoa() {
+  const p = new URLSearchParams({kho_id: $('kho').value, kh_id: kh ? kh.id : ''});
+  hangHoa = await EM.getJSON(API_HH + '?' + p);
+  // cap nhat lai gia trong gio theo khach hang moi
+  gio.forEach(l => { const h = hangHoa.find(x => x.id === l.id); if (h) Object.assign(l, {gia: h.gia, ton: h.ton, ghi_chu_gia: h.ghi_chu_gia}); });
+  veLuoi(); veGio();
+}
+function veLuoi() {
+  const ds = hangHoa.filter(h => !loaiChon || String(h.loai) === loaiChon);
+  $('grid').innerHTML = ds.map(h => `
+    <div class="pos-item ${h.ton <= 0 ? 'het' : ''}" data-id="${h.id}">
+      <div class="ten">${EM.esc(h.ten)}</div>
+      <div><div class="small text-muted">${EM.esc(h.ma)} · tồn ${h.ton}</div>
+      <div class="gia">${EM.vnd(h.gia)}${h.gia < h.gia_niem_yet ? ` <small class="text-decoration-line-through text-muted fw-normal">${EM.vnd(h.gia_niem_yet)}</small>` : ''}</div></div>
+    </div>`).join('') || '<div class="text-muted p-3">Không có mặt hàng.</div>';
+}
+function them(h, sl = 1) {
+  const l = gio.find(x => x.id === h.id);
+  const moi = (l ? l.sl : 0) + sl;
+  if (moi > h.ton) { $('scanMsg').textContent = `"${h.ten}" chỉ còn ${h.ton} ${h.dvt} tại kho này.`; return; }
+  $('scanMsg').textContent = '';
+  if (l) l.sl = moi; else gio.push({...h, sl});
+  veGio();
+}
+function tamTinh() { return gio.reduce((s, l) => s + l.gia * l.sl, 0); }
+function giamDiem() {
+  if (!kh || !kh.the) return 0;
+  let d = Math.max(0, Math.min(parseInt($('diem').value || 0), kh.diem));
+  return Math.min(d * GIA_TRI_DIEM, tamTinh());
+}
+function tongTra() { return tamTinh() - giamDiem(); }
+function veGio() {
+  $('lines').innerHTML = gio.map((l, i) => `
+    <div class="d-flex align-items-center border-bottom py-2 gap-2">
+      <div class="flex-fill"><div class="fw-semibold lh-sm">${EM.esc(l.ten)}</div>
+        <small class="text-muted">${EM.vnd(l.gia)}${l.ghi_chu_gia ? ' · ' + EM.esc(l.ghi_chu_gia) : ''}</small></div>
+      <button class="btn btn-light qty-btn" data-i="${i}" data-d="-1">−</button>
+      <span class="fw-bold" style="min-width:28px;text-align:center">${l.sl}</span>
+      <button class="btn btn-light qty-btn" data-i="${i}" data-d="1">+</button>
+      <div class="text-end fw-semibold" style="min-width:90px">${EM.vnd(l.gia * l.sl)}</div>
+    </div>`).join('') || '<div class="text-center text-muted p-4"><i class="bi bi-cart fs-1"></i><br>Chưa có hàng — quét mã vạch hoặc chạm vào sản phẩm</div>';
+  $('tamTinh').textContent = EM.vnd(tamTinh());
+  const g = giamDiem();
+  $('giamDiem').textContent = g ? '-' + EM.vnd(g) : '';
+  $('tong').textContent = EM.vnd(tongTra());
+  const t = tongTra(), goi = [t, Math.ceil(t / 10000) * 10000, Math.ceil(t / 50000) * 50000, Math.ceil(t / 100000) * 100000, 200000, 500000];
+  $('goiY').innerHTML = [...new Set(goi)].filter(v => v >= t && v > 0).slice(0, 5)
+    .map(v => `<button class="btn btn-sm btn-outline-secondary" data-tien="${v}">${EM.vnd(v)}</button>`).join('');
+  tinhThoi();
+}
+function tinhThoi() { $('tienThoi').textContent = EM.vnd(Math.max(0, (parseFloat($('khachDua').value) || 0) - tongTra())); }
+function chonKH(k) {
+  kh = k;
+  $('khResult').innerHTML = ''; $('khSearch').value = '';
+  $('khInfo').innerHTML = k ? `<span class="badge bg-success fs-6">${EM.esc(k.ten)}</span><small>${EM.esc(k.dien_thoai || '')} ${k.loai ? '· ' + EM.esc(k.loai) : ''}</small>
+      ${k.the ? `<span class="badge bg-warning text-dark"><i class="bi bi-credit-card"></i> ${k.the} · ${k.diem} điểm</span>` : ''}
+      <button class="btn btn-sm btn-link text-danger ms-auto" id="boKH">Bỏ chọn</button>`
+    : '<span class="badge bg-secondary fs-6">Khách lẻ</span>';
+  $('diemBox').classList.toggle('d-none', !(k && k.the)); $('diemBox').classList.toggle('d-flex', !!(k && k.the));
+  $('diem').value = 0; $('diem').max = k ? k.diem : 0;
+  taiHangHoa();
+}
+
+// ----- su kien
+$('scan').addEventListener('keydown', async (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const q = $('scan').value.trim(); $('scan').value = '';
+  if (!q) return;
+  let h = hangHoa.find(x => x.ma_vach === q || x.ma === q);
+  if (!h) {
+    const ds = hangHoa.filter(x => x.ten.toLowerCase().includes(q.toLowerCase()));
+    if (ds.length === 1) h = ds[0];
+    else if (ds.length > 1) { veLuoiLoc(ds); $('scanMsg').textContent = `Có ${ds.length} mặt hàng khớp "${q}", chạm để chọn.`; return; }
+  }
+  if (h) them(h); else $('scanMsg').textContent = `Không tìm thấy mặt hàng "${q}".`;
+});
+function veLuoiLoc(ds) { const tam = hangHoa; hangHoa = ds; veLuoi(); hangHoa = tam; }
+$('grid').addEventListener('click', (e) => {
+  const it = e.target.closest('.pos-item'); if (!it) return;
+  const h = hangHoa.find(x => x.id == it.dataset.id); if (h) them(h);
+  $('scan').focus();
+});
+$('chips').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-loai]'); if (!b) return;
+  loaiChon = b.dataset.loai;
+  document.querySelectorAll('#chips .chip').forEach(c => c.className = 'btn chip ' + (c === b ? 'btn-success' : 'btn-outline-success'));
+  veLuoi();
+});
+$('lines').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-i]'); if (!b) return;
+  const l = gio[b.dataset.i], d = parseInt(b.dataset.d);
+  if (d > 0 && l.sl + 1 > l.ton) { $('scanMsg').textContent = `"${l.ten}" chỉ còn ${l.ton}.`; return; }
+  l.sl += d; if (l.sl <= 0) gio.splice(b.dataset.i, 1);
+  veGio();
+});
+let tKH;
+$('khSearch').addEventListener('input', () => {
+  clearTimeout(tKH);
+  tKH = setTimeout(async () => {
+    const q = $('khSearch').value.trim();
+    if (q.length < 2) { $('khResult').innerHTML = ''; return; }
+    const ds = await EM.getJSON(API_KH + '?q=' + encodeURIComponent(q));
+    window._ds = ds;
+    $('khResult').innerHTML = ds.map((k, i) => `<button class="list-group-item list-group-item-action py-2" data-k="${i}">
+      <b>${EM.esc(k.ten)}</b> · ${EM.esc(k.dien_thoai || '')} ${k.the ? '<span class="badge bg-warning text-dark">' + k.the + '</span>' : ''}</button>`).join('')
+      || '<div class="list-group-item text-muted">Không tìm thấy</div>';
+  }, 250);
+});
+$('khResult').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) chonKH(window._ds[b.dataset.k]); });
+$('khInfo').addEventListener('click', (e) => { if (e.target.id === 'boKH') chonKH(null); });
+$('kho').addEventListener('change', () => { gio = []; taiHangHoa(); });
+$('diem').addEventListener('input', veGio);
+$('dungHet').addEventListener('click', () => { $('diem').value = Math.min(kh.diem, Math.ceil(tamTinh() / GIA_TRI_DIEM)); veGio(); });
+$('khachDua').addEventListener('input', tinhThoi);
+$('goiY').addEventListener('click', (e) => { const b = e.target.closest('[data-tien]'); if (b) { $('khachDua').value = b.dataset.tien; tinhThoi(); } });
+document.querySelectorAll('[name=httt]').forEach(r => r.addEventListener('change', () =>
+  $('tienMatBox').classList.toggle('d-none', r.value !== 'tien_mat' || !r.checked)));
+$('huy').addEventListener('click', () => { if (gio.length && confirm('Xóa toàn bộ giỏ hàng?')) { gio = []; veGio(); } });
+$('thanhToan').addEventListener('click', async () => {
+  if (!gio.length) { $('scanMsg').textContent = 'Giỏ hàng trống.'; return; }
+  const httt = document.querySelector('[name=httt]:checked').value;
+  if (httt === 'tien_mat' && !$('khachDua').value) $('khachDua').value = tongTra();
+  $('thanhToan').disabled = true;
+  const r = await EM.postJSON(API_TT, {
+    kh_id: kh ? kh.id : null, kho_id: $('kho').value, hinh_thuc_tt: httt,
+    items: gio.map(l => ({hang_hoa_id: l.id, so_luong: l.sl})),
+    diem_su_dung: kh && kh.the ? parseInt($('diem').value || 0) : 0, tien_khach_dua: parseFloat($('khachDua').value || 0),
+  });
+  $('thanhToan').disabled = false;
+  if (!r.ok) { alert(r.loi); return; }
+  $('kqNoiDung').innerHTML = `Hóa đơn <b>${r.ma_hd}</b><br>Tổng: <b>${EM.vnd(r.tong)}</b>` +
+    (httt === 'tien_mat' ? `<br>Tiền thối: <b class="text-success">${EM.vnd(r.tien_thoi)}</b>` : '') +
+    (r.diem_cong ? `<br>Cộng ${r.diem_cong} điểm tích lũy` : '') +
+    (r.co_the_moi ? `<div class="alert alert-warning mt-2 mb-0"><i class="bi bi-star-fill"></i> Khách hàng đạt điều kiện, đã lập thẻ thân thiết!</div>` : '');
+  $('kqIn').href = r.url_in;
+  new bootstrap.Modal($('kq')).show();
+});
+$('donMoi').addEventListener('click', () => { gio = []; $('khachDua').value = ''; chonKH(null); setTimeout(() => $('scan').focus(), 300); });
+// giu focus o o quet ma de may quet (keyboard wedge) luon nhap dung cho
+document.addEventListener('click', (e) => { if (!e.target.closest('input,select,textarea,.modal,button')) $('scan').focus(); });
+taiHangHoa();
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Đơn đặt hàng{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">{{ m.tieu_de('Đơn đặt hàng', 'bi-cart-check') }}</div>
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="{{ url_for('banhang.don_hang', nguon=nguon) }}" class="btn {{ 'btn-success' if not request.args.trang_thai else 'btn-outline-success' }}">Tất cả</a>
+  {% for k, (ten, mau) in TRANG_THAI_DON.items() %}
+  <a href="{{ url_for('banhang.don_hang', trang_thai=k, nguon=nguon) }}" class="btn {{ 'btn-' ~ mau if request.args.trang_thai == k else 'btn-outline-' ~ mau }}">
+    {{ ten }}{% if nguon == 'online' and dem.get(k) %} <span class="badge bg-light text-dark">{{ dem[k] }}</span>{% endif %}</a>
+  {% endfor %}
+</div>
+<div class="card">
+  <div class="card-body pb-0"><form class="row g-2 mb-3">
+    <input type="hidden" name="trang_thai" value="{{ request.args.trang_thai or '' }}">
+    <div class="col-md-5"><input name="q" value="{{ request.args.q or '' }}" class="form-control" placeholder="Mã đơn / tên / SĐT khách hàng"></div>
+    <div class="col-md-3"><select name="nguon" class="form-select">
+      <option value="online" {{ 'selected' if nguon == 'online' }}>Đặt online</option>
+      <option value="tai_quay" {{ 'selected' if nguon == 'tai_quay' }}>Bán tại quầy</option>
+      <option value="tat_ca" {{ 'selected' if nguon == 'tat_ca' }}>Tất cả nguồn</option></select></div>
+    <div class="col-auto"><button class="btn btn-primary"><i class="bi bi-search"></i> Lọc</button></div>
+  </form></div>
+  <div class="table-responsive"><table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>Mã đơn</th><th>Ngày đặt</th><th>Khách hàng</th><th>Kho</th><th>Trạng thái</th>
+      <th class="text-end">Tổng tiền</th><th></th></tr></thead>
+    <tbody>{% for d in trang.items %}
+      <tr><td class="fw-semibold">{{ d.ma_don }}</td><td>{{ d.ngay_dat|ngay_gio }}</td>
+        <td>{{ d.khach_hang.ho_ten if d.khach_hang else 'Khách lẻ' }}<div class="small text-muted">{{ d.khach_hang.dien_thoai if d.khach_hang }}</div></td>
+        <td>{{ d.kho.ten_kho }}</td><td>{{ m.badge_don(d) }}</td><td class="text-end fw-semibold">{{ d.tong_thanh_toan|vnd }}</td>
+        <td class="text-end"><a href="{{ url_for('banhang.don_hang_chi_tiet', id=d.id) }}" class="btn btn-sm btn-outline-primary">Xử lý <i class="bi bi-chevron-right"></i></a></td></tr>
+    {% else %}<tr><td colspan="7" class="text-center text-muted py-4">Không có đơn hàng.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="card-body pt-0">{{ m.phan_trang(trang, 'banhang.don_hang') }}</div>
+</div>
+{% endblock %}

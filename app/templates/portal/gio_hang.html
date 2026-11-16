@@ -1,0 +1,45 @@
+{% extends 'layouts/portal.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Giỏ hàng{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-cart3"></i> Giỏ hàng</h4>
+{% if not dong %}
+<div class="card"><div class="card-body text-center py-5 text-muted">Giỏ hàng trống. <a href="{{ url_for('portal.cua_hang') }}">Tiếp tục mua sắm</a></div></div>
+{% else %}
+<div class="row g-3">
+  <div class="col-lg-8"><div class="card">
+    <form method="post">{{ m.csrf() }}<button type="submit" hidden tabindex="-1"></button>
+    <div class="table-responsive"><table class="table align-middle mb-0">
+      <thead class="table-light"><tr><th>Sản phẩm</th><th class="text-end">Đơn giá</th><th style="width:110px">SL</th><th class="text-end">Thành tiền</th><th></th></tr></thead>
+      <tbody>{% for d in dong %}
+        <tr><td>{{ d.hh.ten_hang }}<div class="small text-muted">{{ d.hh.don_vi_tinh }}</div></td>
+          <td class="text-end">{{ d.don_gia|vnd }}{% if d.ghi_chu %}<div class="small text-success">{{ d.ghi_chu }}</div>{% endif %}</td>
+          <td><input type="number" name="sl_{{ d.hh.id }}" value="{{ d.sl }}" min="0" class="form-control"></td>
+          <td class="text-end fw-semibold">{{ d.thanh_tien|vnd }}</td>
+          <td><button name="xoa" value="{{ d.hh.id }}" class="btn btn-sm btn-outline-danger" title="Bỏ khỏi giỏ"><i class="bi bi-trash"></i></button></td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    <div class="card-body d-flex"><button class="btn btn-outline-primary"><i class="bi bi-arrow-repeat"></i> Cập nhật giỏ hàng</button>
+      <div class="ms-auto fs-5">Tạm tính: <b class="text-success">{{ tong|vnd }}</b></div></div>
+    </form>
+  </div></div>
+  <div class="col-lg-4"><div class="card"><div class="card-header">Thông tin đặt hàng</div><div class="card-body">
+    {% if kh %}
+    <form method="post" action="{{ url_for('portal.dat_hang') }}">{{ m.csrf() }}
+      <div class="mb-2"><label class="form-label">Nhận hàng từ chi nhánh</label><select name="kho_id" class="form-select">
+        {% for k in khos %}<option value="{{ k.id }}">{{ k.ten_kho }}{% if k.dia_chi %} — {{ k.dia_chi }}{% endif %}</option>{% endfor %}</select></div>
+      <div class="mb-2"><label class="form-label">Địa chỉ giao hàng *</label><textarea name="dia_chi_giao" rows="2" class="form-control" required>{{ kh.dia_chi or '' }}</textarea></div>
+      <div class="mb-3"><label class="form-label">Ghi chú</label><input name="ghi_chu" class="form-control"></div>
+      <div class="d-flex justify-content-between fs-5 mb-2"><span>Tổng cộng</span><b class="text-success">{{ tong|vnd }}</b></div>
+      <div class="small text-muted mb-3">Điểm tích lũy hiện có: {{ kh.diem_tich_luy }} — có thể dùng khi thanh toán tại quầy/giao hàng.</div>
+      <button class="btn btn-success btn-lg w-100"><i class="bi bi-bag-check"></i> Đặt hàng</button>
+    </form>
+    {% else %}
+    <p>Vui lòng đăng nhập để đặt hàng và được áp giá ưu đãi theo tài khoản của bạn.</p>
+    <a href="{{ url_for('portal.dang_nhap', next=url_for('portal.gio_hang')) }}" class="btn btn-success w-100 mb-2">Đăng nhập</a>
+    <a href="{{ url_for('portal.dang_ky') }}" class="btn btn-outline-success w-100">Đăng ký</a>
+    {% endif %}
+  </div></div></div>
+</div>
+{% endif %}
+{% endblock %}

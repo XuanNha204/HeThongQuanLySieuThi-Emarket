@@ -1,0 +1,19 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Sao lưu dữ liệu{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 gap-2">
+  {{ m.tieu_de('Sao lưu dữ liệu', 'bi-database-check') }}
+  {% if current_user.co_quyen('he_thong', 'them') %}
+  <form method="post" class="ms-auto">{{ m.csrf() }}<button class="btn btn-success"><i class="bi bi-cloud-arrow-up"></i> Sao lưu ngay</button></form>{% endif %}
+</div>
+<div class="alert alert-light border"><i class="bi bi-clock-history"></i> Hệ thống <b>tự động sao lưu hằng ngày lúc {{ gio }}:00</b>
+  (nếu máy chủ tắt vào giờ đó, bản sao lưu sẽ được tạo bù khi khởi động lại). Giữ lại {{ giu_lai }} bản gần nhất.</div>
+<div class="card"><div class="table-responsive"><table class="table table-hover mb-0">
+  <thead class="table-light"><tr><th>Tên file</th><th>Thời gian</th><th class="text-end">Dung lượng</th><th></th></tr></thead>
+  <tbody>{% for b in ds %}
+    <tr><td class="fw-semibold">{{ b.ten }}</td><td>{{ b.thoi_gian|ngay_gio }}</td><td class="text-end">{{ '%.1f'|format(b.kich_thuoc / 1024) }} KB</td>
+      <td class="text-end">{% if current_user.co_quyen('he_thong', 'in_an') %}<a href="{{ url_for('hethong.tai_sao_luu', ten=b.ten) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Tải về</a>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="4" class="text-center text-muted py-4">Chưa có bản sao lưu.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

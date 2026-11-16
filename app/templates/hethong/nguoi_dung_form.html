@@ -1,0 +1,69 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}{{ 'Sửa' if nd.id else 'Thêm' }} người dùng{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 gap-2">
+  {{ m.tieu_de(('Sửa người dùng ' ~ nd.username) if nd.id else 'Thêm người dùng', 'bi-person-gear') }}
+  <a href="{{ url_for('hethong.nguoi_dung') }}" class="btn btn-light ms-auto"><i class="bi bi-arrow-left"></i> Danh sách</a>
+</div>
+{% set f = request.form %}
+<form method="post">{{ m.csrf() }}
+<div class="row g-3">
+  <div class="col-lg-4"><div class="card"><div class="card-header">Thông tin tài khoản</div><div class="card-body">
+    <div class="mb-2"><label class="form-label">Tên đăng nhập *</label><input name="username" value="{{ f.username or nd.username or '' }}" class="form-control" required></div>
+    <div class="mb-2"><label class="form-label">Họ tên *</label><input name="ho_ten" value="{{ f.ho_ten or nd.ho_ten or '' }}" class="form-control" required></div>
+    <div class="mb-2"><label class="form-label">Email</label><input type="email" name="email" value="{{ f.email or nd.email or '' }}" class="form-control"></div>
+    <div class="mb-2"><label class="form-label">Điện thoại</label><input name="dien_thoai" value="{{ f.dien_thoai or nd.dien_thoai or '' }}" class="form-control"></div>
+    <div class="mb-2"><label class="form-label">Mật khẩu {{ '(bỏ trống nếu không đổi)' if nd.id else '*' }}</label>
+      <input type="password" name="password" class="form-control" {{ 'required' if not nd.id }} minlength="6" autocomplete="new-password"></div>
+    <div class="mb-2"><label class="form-label">Vai trò</label>
+      <select name="vai_tro" id="vaiTro" class="form-select">{% for k, v in VAI_TRO.items() %}<option value="{{ k }}" {{ 'selected' if (f.vai_tro or nd.vai_tro) == k }}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" name="trang_thai" value="1" id="tt" {{ 'checked' if nd.trang_thai }}>
+      <label class="form-check-label ms-2" for="tt">Tài khoản hoạt động</label></div>
+  </div></div></div>
+  <div class="col-lg-8"><div class="card">
+    <div class="card-header d-flex align-items-center">Phân quyền chi tiết theo chức năng / chứng từ
+      <button type="button" class="btn btn-sm btn-outline-primary ms-auto" id="apMacDinh"><i class="bi bi-magic"></i> Áp quyền mặc định theo vai trò</button></div>
+    <div id="ghiChuAdmin" class="alert alert-dark m-3 d-none">Quản trị viên có toàn quyền trên mọi chức năng.</div>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0 text-center">
+      <thead class="table-light"><tr><th class="text-start">Chức năng</th>{% for q, ten in QUYEN.items() %}
+        <th>{{ ten }}<br><input type="checkbox" class="form-check-input cot" data-q="{{ q }}" title="Chọn cả cột"></th>{% endfor %}</tr></thead>
+      <tbody>{% for cn, ten in CHUC_NANG.items() %}
+        <tr><td class="text-start"><label><input type="checkbox" class="form-check-input dong me-2" data-cn="{{ cn }}" title="Chọn cả dòng">{{ ten }}</label></td>
+          {% for q in QUYEN %}<td><input type="checkbox" class="form-check-input o" name="q_{{ cn }}_{{ q }}" value="1" data-cn="{{ cn }}" data-q="{{ q }}"
+            {{ 'checked' if q in quyen.get(cn, ()) }}></td>{% endfor %}</tr>
+      {% endfor %}</tbody>
+    </table></div>
+    <div class="card-body"><div class="form-text">Có quyền Thêm/Sửa/Xóa/In thì tự động có quyền Xem. Mọi route đều được kiểm tra quyền phía máy chủ.</div>
+      <button class="btn btn-success btn-lg mt-2"><i class="bi bi-check-lg"></i> Lưu người dùng</button></div>
+  </div></div>
+</div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const MAC_DINH = {{ mac_dinh|tojson }};
+  const o = [...document.querySelectorAll('input.o')];
+  const vt = document.getElementById('vaiTro');
+  const capNhatAdmin = () => {
+    const ad = vt.value === 'admin';
+    document.getElementById('ghiChuAdmin').classList.toggle('d-none', !ad);
+    document.querySelectorAll('table input').forEach(i => i.disabled = ad);
+  };
+  document.getElementById('apMacDinh').addEventListener('click', () => {
+    const md = MAC_DINH[vt.value] || {};
+    o.forEach(i => i.checked = (md[i.dataset.cn] || []).includes(i.dataset.q));
+  });
+  document.querySelectorAll('input.cot').forEach(c => c.addEventListener('change', () =>
+    o.filter(i => i.dataset.q === c.dataset.q).forEach(i => i.checked = c.checked)));
+  document.querySelectorAll('input.dong').forEach(c => c.addEventListener('change', () =>
+    o.filter(i => i.dataset.cn === c.dataset.cn).forEach(i => i.checked = c.checked)));
+  o.forEach(i => i.addEventListener('change', () => {
+    if (i.checked && i.dataset.q !== 'xem') document.querySelector(`input.o[data-cn="${i.dataset.cn}"][data-q="xem"]`).checked = true;
+  }));
+  vt.addEventListener('change', capNhatAdmin);
+  capNhatAdmin();
+})();
+</script>
+{% endblock %}

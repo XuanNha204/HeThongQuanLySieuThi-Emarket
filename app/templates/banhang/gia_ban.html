@@ -1,0 +1,54 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Giá bán theo khách hàng{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">{{ m.tieu_de('Giá bán theo khách hàng', 'bi-currency-exchange') }}</div>
+<div class="alert alert-light border small">Thứ tự áp giá khi bán: <b>① Giá riêng của khách hàng cho mặt hàng</b> →
+  <b>② Chiết khấu theo loại khách hàng</b> → <b>③ Giá niêm yết</b>.</div>
+<div class="row g-3">
+  {% if current_user.co_quyen('gia_ban', 'them') %}
+  <div class="col-lg-4">
+    <div class="card"><div class="card-header">Thiết lập giá riêng</div><div class="card-body">
+      <form method="post">{{ m.csrf() }}
+        <div class="mb-2"><label class="form-label">Khách hàng</label>
+          <select name="kh_id" class="form-select" required><option value="">-- Chọn --</option>
+            {% for k in khach_hangs %}<option value="{{ k.id }}" {{ 'selected' if kh and kh.id == k.id }}>{{ k.ma_kh }} - {{ k.ho_ten }}{% if k.loai_khach_hang %} ({{ k.loai_khach_hang.ten_loai }}){% endif %}</option>{% endfor %}</select></div>
+        <div class="mb-2"><label class="form-label">Mặt hàng</label>
+          <select name="hang_hoa_id" class="form-select" required id="hh"><option value="">-- Chọn --</option>
+            {% for h in hang_hoas %}<option value="{{ h.id }}" data-gia="{{ h.gia_ban }}">{{ h.ma_hang }} - {{ h.ten_hang }}</option>{% endfor %}</select>
+          <div class="form-text" id="giaNY"></div></div>
+        <div class="mb-2"><label class="form-label">Giá bán riêng (đ)</label><input type="number" name="gia_ban" min="1" step="any" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Ghi chú</label><input name="ghi_chu" class="form-control" placeholder="VD: hợp đồng đại lý 2026"></div>
+        <button class="btn btn-success w-100"><i class="bi bi-check-lg"></i> Lưu giá riêng</button>
+      </form></div></div>
+  </div>
+  {% endif %}
+  <div class="col-lg">
+    <div class="card">
+      <div class="card-body pb-0"><form class="row g-2 mb-3"><div class="col-md-8">
+        <select name="kh_id" class="form-select" onchange="this.form.submit()"><option value="">-- Tất cả khách hàng --</option>
+          {% for k in khach_hangs %}<option value="{{ k.id }}" {{ 'selected' if kh and kh.id == k.id }}>{{ k.ma_kh }} - {{ k.ho_ten }}</option>{% endfor %}</select></div></form></div>
+      <div class="table-responsive"><table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Khách hàng</th><th>Mặt hàng</th><th class="text-end">Giá niêm yết</th><th class="text-end">Giá riêng</th>
+          <th class="text-end">Chênh lệch</th><th>Áp dụng từ</th><th></th></tr></thead>
+        <tbody>{% for g in ds %}
+          <tr><td>{{ g.khach_hang.ho_ten }}</td><td>{{ g.hang_hoa.ten_hang }}{% if g.ghi_chu %}<div class="small text-muted">{{ g.ghi_chu }}</div>{% endif %}</td>
+            <td class="text-end">{{ g.hang_hoa.gia_ban|vnd }}</td><td class="text-end fw-bold text-success">{{ g.gia_ban|vnd }}</td>
+            <td class="text-end">{{ (g.gia_ban - g.hang_hoa.gia_ban)|vnd }}</td><td>{{ g.ngay_ap_dung|ngay }}</td>
+            <td class="text-end">{% if current_user.co_quyen('gia_ban', 'xoa') %}
+              <form method="post" action="{{ url_for('banhang.xoa_gia_ban', id=g.id) }}" data-confirm="Xóa giá riêng này?">{{ m.csrf() }}
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>{% endif %}</td></tr>
+        {% else %}<tr><td colspan="7" class="text-center text-muted py-4">Chưa có giá riêng.</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('hh')?.addEventListener('change', (e) => {
+  const o = e.target.selectedOptions[0];
+  document.getElementById('giaNY').textContent = o.dataset.gia ? 'Giá niêm yết: ' + EM.vnd(parseFloat(o.dataset.gia)) : '';
+});
+</script>
+{% endblock %}

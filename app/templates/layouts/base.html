@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}eMarket{% endblock %} · eMarket</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/icons/bootstrap-icons.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% macro menu(endpoint, icon, text, cn=None, q='xem', active=None) -%}
+  {% set ep = request.endpoint or '' %}
+  {% if cn is none or current_user.co_quyen(cn, q) %}
+  <a class="nav-link {{ 'active' if (active and ep.startswith(active)) or ep == endpoint }}" href="{{ url_for(endpoint) }}">
+    <i class="bi {{ icon }}"></i><span>{{ text }}</span></a>
+  {% endif %}
+{%- endmacro %}
+<nav class="em-sidebar no-print">
+  <a class="brand" href="{{ url_for('dashboard.index') }}"><i class="bi bi-basket2-fill"></i> eMarket</a>
+  {{ menu('dashboard.index', 'bi-speedometer2', 'Tổng quan') }}
+  <div class="nhom">Bán hàng</div>
+  {{ menu('banhang.pos', 'bi-upc-scan', 'Bán tại quầy (POS)', 'hoa_don', 'them') }}
+  {{ menu('banhang.don_hang', 'bi-cart-check', 'Đơn đặt hàng', 'don_hang', active='banhang.don_hang') }}
+  {{ menu('banhang.hoa_don', 'bi-receipt', 'Hóa đơn', 'hoa_don') }}
+  {{ menu('banhang.gia_ban', 'bi-currency-exchange', 'Giá bán theo KH', 'gia_ban') }}
+  <div class="nhom">Khách hàng</div>
+  {{ menu('khachhang.kh_list', 'bi-person-vcard', 'Khách hàng', 'khach_hang', active='khachhang.kh') }}
+  {{ menu('khachhang.the_than_thiet', 'bi-credit-card-2-front', 'Thẻ thân thiết', 'khach_hang') }}
+  <div class="nhom">Kho hàng</div>
+  {{ menu('tonkho.index', 'bi-boxes', 'Tồn kho', 'ton_kho') }}
+  {{ menu('tonkho.phieu_nhap', 'bi-box-arrow-in-down', 'Nhập hàng', 'phieu_nhap', active='tonkho.') }}
+  <div class="nhom">Công nợ</div>
+  {{ menu('congno.danh_sach', 'bi-journal-text', 'Công nợ theo chứng từ', 'cong_no', active='congno.chi_tiet') }}
+  {{ menu('congno.tong_hop', 'bi-clipboard-data', 'Tổng hợp nợ', 'cong_no') }}
+  <div class="nhom">Danh mục</div>
+  {{ menu('danhmuc.hang_hoa_list', 'bi-box-seam', 'Hàng hóa', 'danh_muc', active='danhmuc.hang_hoa') }}
+  {{ menu('danhmuc.loai_hang_list', 'bi-tags', 'Loại hàng', 'danh_muc', active='danhmuc.loai_hang') }}
+  {{ menu('danhmuc.ncc_list', 'bi-truck', 'Nhà cung cấp', 'danh_muc', active='danhmuc.ncc') }}
+  {{ menu('danhmuc.loai_kh_list', 'bi-people', 'Loại khách hàng', 'danh_muc', active='danhmuc.loai_kh') }}
+  {{ menu('danhmuc.kho_list', 'bi-building', 'Kho / chi nhánh', 'danh_muc', active='danhmuc.kho') }}
+  {{ menu('danhmuc.in_ma_vach', 'bi-upc', 'In mã vạch', 'danh_muc', 'in_an') }}
+  <div class="nhom">Báo cáo & hệ thống</div>
+  {{ menu('thongke.index', 'bi-bar-chart-line', 'Thống kê', 'bao_cao') }}
+  {{ menu('hethong.thong_bao', 'bi-bell', 'Cảnh báo') }}
+  {{ menu('hethong.nguoi_dung', 'bi-shield-lock', 'Người dùng & quyền', 'he_thong', active='hethong.nguoi_dung') }}
+  {{ menu('hethong.sao_luu', 'bi-database-check', 'Sao lưu dữ liệu', 'he_thong') }}
+  <div class="nhom">Tiện ích</div>
+  <a class="nav-link" href="{{ url_for('kiosk.index') }}" target="_blank"><i class="bi bi-display"></i><span>Kiosk tra cứu</span></a>
+  <a class="nav-link" href="{{ url_for('portal.cua_hang') }}" target="_blank"><i class="bi bi-shop"></i><span>Cổng khách hàng</span></a>
+  <div class="pb-4"></div>
+</nav>
+<div class="em-main">
+  <header class="em-topbar d-flex align-items-center px-3 gap-2 no-print">
+    <button class="btn btn-light d-lg-none" data-toggle-sidebar><i class="bi bi-list fs-4"></i></button>
+    <div class="fw-semibold text-secondary d-none d-md-block">{% block breadcrumb %}{% endblock %}</div>
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <a href="{{ url_for('hethong.thong_bao') }}" class="btn btn-light position-relative" title="Cảnh báo">
+        <i class="bi bi-bell fs-5"></i>
+        {% if so_thong_bao %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ so_thong_bao }}</span>{% endif %}
+      </a>
+      <div class="dropdown">
+        <button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">
+          <i class="bi bi-person-circle"></i> {{ current_user.ho_ten }}
+          <small class="text-muted d-none d-sm-inline">({{ current_user.ten_vai_tro }})</small>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item py-2" href="{{ url_for('hethong.doi_mat_khau') }}"><i class="bi bi-key"></i> Đổi mật khẩu</a></li>
+          <li><form method="post" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="dropdown-item py-2 text-danger"><i class="bi bi-box-arrow-right"></i> Đăng xuất</button></form></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+  <main class="em-content">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, m in msgs %}
+      <div class="alert alert-{{ cat if cat != 'message' else 'info' }} alert-dismissible fade show no-print">{{ m }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

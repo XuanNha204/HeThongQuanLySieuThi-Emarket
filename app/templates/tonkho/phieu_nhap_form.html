@@ -1,0 +1,109 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Lập phiếu nhập{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center mb-3 gap-2">
+  {{ m.tieu_de('Lập phiếu nhập hàng', 'bi-box-arrow-in-down') }}
+  <div class="ms-auto d-flex gap-2">
+    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#nhapExcel"><i class="bi bi-file-earmark-arrow-up"></i> Nhập từ Excel</button>
+    <a href="{{ url_for('tonkho.phieu_nhap') }}" class="btn btn-light"><i class="bi bi-arrow-left"></i> Danh sách</a>
+  </div>
+</div>
+<form method="post" id="fPN">{{ m.csrf() }}
+<div class="card mb-3"><div class="card-body row g-3">
+  <div class="col-md-4"><label class="form-label">Nhà cung cấp *</label>
+    <select name="nha_cung_cap_id" class="form-select" required><option value="">-- Chọn --</option>
+      {% for n in nccs %}<option value="{{ n.id }}" {{ 'selected' if request.form.nha_cung_cap_id == n.id|string }}>{{ n.ma_ncc }} - {{ n.ten_ncc }}</option>{% endfor %}</select></div>
+  <div class="col-md-3"><label class="form-label">Nhập vào kho *</label>
+    <select name="kho_id" class="form-select" required>{% for k in khos %}<option value="{{ k.id }}" {{ 'selected' if request.form.kho_id == k.id|string }}>{{ k.ten_kho }}</option>{% endfor %}</select></div>
+  <div class="col-md-5"><label class="form-label">Ghi chú</label><input name="ghi_chu" value="{{ request.form.ghi_chu or '' }}" class="form-control"></div>
+</div></div>
+
+<div class="card mb-3">
+  <div class="card-header d-flex align-items-center gap-2">Chi tiết hàng nhập
+    <input id="quet" class="form-control form-control-sm ms-auto" style="max-width:260px" placeholder="Quét mã vạch để thêm dòng…"></div>
+  <div class="table-responsive"><table class="table align-middle mb-0">
+    <thead class="table-light"><tr><th style="min-width:260px">Mặt hàng</th><th style="width:120px">Số lượng</th><th style="width:160px">Đơn giá nhập</th>
+      <th style="width:170px">Hạn sử dụng</th><th class="text-end" style="width:150px">Thành tiền</th><th style="width:50px"></th></tr></thead>
+    <tbody id="dong"></tbody>
+    <tfoot><tr><td colspan="4"><button type="button" class="btn btn-outline-primary" id="themDong"><i class="bi bi-plus-lg"></i> Thêm dòng</button></td>
+      <td class="text-end fw-bold fs-5" id="tong">0 đ</td><td></td></tr></tfoot>
+  </table></div>
+</div>
+
+<div class="card"><div class="card-body row g-3 align-items-end">
+  <div class="col-md-3"><label class="form-label">Đã thanh toán cho NCC (đ)</label>
+    <input type="number" min="0" step="any" name="da_thanh_toan" value="{{ request.form.da_thanh_toan or 0 }}" class="form-control" id="daTT"></div>
+  <div class="col-md-3"><label class="form-label">Hạn thanh toán phần còn nợ</label>
+    <input type="date" name="han_thanh_toan" value="{{ request.form.han_thanh_toan or '' }}" class="form-control">
+    <div class="form-text">Bỏ trống = mặc định {{ cfg.SO_NGAY_NO_NCC }} ngày</div></div>
+  <div class="col-md-3"><div class="text-muted small">Ghi công nợ NCC</div><div class="fs-5 fw-bold text-danger" id="conNo">0 đ</div></div>
+  <div class="col-md-3"><button class="btn btn-success btn-lg w-100"><i class="bi bi-check-lg"></i> Lưu phiếu nhập</button></div>
+</div></div>
+</form>
+
+<template id="mauDong"><tr>
+  <td><select name="hang_hoa_id" class="form-select hh" required><option value="">-- Chọn mặt hàng --</option>
+    {% for h in hang_hoas %}<option value="{{ h.id }}" data-gia="{{ h.gia_nhap }}" data-mv="{{ h.ma_vach or '' }}">{{ h.ma_hang }} - {{ h.ten_hang }} ({{ h.don_vi_tinh }})</option>{% endfor %}</select></td>
+  <td><input type="number" name="so_luong" min="1" value="1" class="form-control sl" required></td>
+  <td><input type="number" name="don_gia" min="0" step="any" class="form-control gia" required></td>
+  <td><input type="date" name="han_su_dung" class="form-control"></td>
+  <td class="text-end fw-semibold tt">0 đ</td>
+  <td><button type="button" class="btn btn-outline-danger btn-sm xoa"><i class="bi bi-x-lg"></i></button></td>
+</tr></template>
+
+<div class="modal fade" id="nhapExcel" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <form method="post" action="{{ url_for('tonkho.nhap_excel_phieu_nhap') }}" enctype="multipart/form-data">{{ m.csrf() }}
+    <div class="modal-header"><h5 class="modal-title">Lập phiếu nhập từ Excel</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <a href="{{ url_for('tonkho.mau_excel_phieu_nhap') }}" class="btn btn-sm btn-outline-secondary mb-3"><i class="bi bi-download"></i> Tải file mẫu</a>
+      <div class="mb-2"><label class="form-label">Nhà cung cấp *</label><select name="nha_cung_cap_id" class="form-select" required>
+        {% for n in nccs %}<option value="{{ n.id }}">{{ n.ma_ncc }} - {{ n.ten_ncc }}</option>{% endfor %}</select></div>
+      <div class="mb-2"><label class="form-label">Kho *</label><select name="kho_id" class="form-select" required>
+        {% for k in khos %}<option value="{{ k.id }}">{{ k.ten_kho }}</option>{% endfor %}</select></div>
+      <div class="mb-2"><label class="form-label">Đã thanh toán (đ)</label><input type="number" min="0" step="any" name="da_thanh_toan" value="0" class="form-control"></div>
+      <input type="file" name="file" accept=".xlsx" class="form-control" required>
+      <div class="form-text">Cột: Mã hàng (hoặc mã vạch), Số lượng, Đơn giá, Hạn sử dụng (dd/mm/yyyy).</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-success"><i class="bi bi-upload"></i> Lập phiếu</button></div>
+  </form></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const tb = document.getElementById('dong'), mau = document.getElementById('mauDong');
+  const tinh = () => {
+    let tong = 0;
+    tb.querySelectorAll('tr').forEach(tr => {
+      const tt = (parseFloat(tr.querySelector('.sl').value) || 0) * (parseFloat(tr.querySelector('.gia').value) || 0);
+      tr.querySelector('.tt').textContent = EM.vnd(tt); tong += tt;
+    });
+    document.getElementById('tong').textContent = EM.vnd(tong);
+    document.getElementById('conNo').textContent = EM.vnd(Math.max(0, tong - (parseFloat(document.getElementById('daTT').value) || 0)));
+  };
+  const them = (hhId) => {
+    const tr = mau.content.firstElementChild.cloneNode(true);
+    tb.appendChild(tr);
+    const sel = tr.querySelector('.hh');
+    sel.addEventListener('change', () => { const o = sel.selectedOptions[0]; tr.querySelector('.gia').value = o.dataset.gia || ''; tinh(); });
+    tr.querySelector('.xoa').addEventListener('click', () => { tr.remove(); tinh(); });
+    if (hhId) { sel.value = hhId; sel.dispatchEvent(new Event('change')); }
+    return tr;
+  };
+  document.getElementById('themDong').addEventListener('click', () => them());
+  tb.addEventListener('input', tinh);
+  document.getElementById('daTT').addEventListener('input', tinh);
+  document.getElementById('quet').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const ma = e.target.value.trim(); e.target.value = '';
+    const o = [...mau.content.querySelectorAll('option')].find(x => x.dataset.mv === ma);
+    if (!o) { alert('Không tìm thấy mã vạch ' + ma); return; }
+    const co = [...tb.querySelectorAll('.hh')].find(s => s.value === o.value);
+    if (co) { const sl = co.closest('tr').querySelector('.sl'); sl.value = +sl.value + 1; tinh(); }
+    else them(o.value);
+  });
+  them();
+})();
+</script>
+{% endblock %}

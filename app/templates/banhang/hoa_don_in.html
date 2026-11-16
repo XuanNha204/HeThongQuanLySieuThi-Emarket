@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><title>{{ hd.ma_hd }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="bg-light">
+<div class="text-center my-3 no-print">
+  <button onclick="window.print()" class="btn btn-success btn-lg">In hóa đơn</button>
+  <button onclick="window.close()" class="btn btn-light btn-lg">Đóng</button>
+</div>
+<div class="receipt">
+  <div class="text-center">
+    <div class="fw-bold fs-5">SIÊU THỊ eMARKET</div>
+    <div>{{ don.kho.ten_kho }}</div><div class="small">{{ don.kho.dia_chi or '' }}</div>
+    <hr><div class="fw-bold">HÓA ĐƠN BÁN HÀNG</div>
+  </div>
+  <div>Số HĐ: {{ hd.ma_hd }}</div>
+  <div>Ngày: {{ hd.ngay_lap|ngay_gio }}</div>
+  <div>Thu ngân: {{ hd.nhan_vien.ho_ten if hd.nhan_vien }}</div>
+  <div>Khách hàng: {{ don.khach_hang.ho_ten if don.khach_hang else 'Khách lẻ' }}</div>
+  {% if don.khach_hang and don.khach_hang.the_than_thiet %}<div>Thẻ TT: {{ don.khach_hang.the_than_thiet.ma_the }}</div>{% endif %}
+  <hr>
+  <table>
+    {% for ct in don.chi_tiets %}
+    <tr><td colspan="3">{{ ct.hang_hoa.ten_hang }}</td></tr>
+    <tr><td>{{ ct.so_luong }} x {{ ct.don_gia|so }}</td><td></td><td class="text-end">{{ ct.thanh_tien|so }}</td></tr>
+    {% endfor %}
+  </table>
+  <hr>
+  <table>
+    <tr><td>Tổng tiền hàng</td><td class="text-end">{{ don.tong_tien_hang|so }}</td></tr>
+    {% if don.giam_gia_diem %}<tr><td>Dùng {{ don.diem_su_dung }} điểm</td><td class="text-end">-{{ don.giam_gia_diem|so }}</td></tr>{% endif %}
+    <tr class="fw-bold fs-6"><td>THANH TOÁN</td><td class="text-end">{{ hd.tong_tien|so }}</td></tr>
+    <tr><td>Hình thức</td><td class="text-end">{{ hd.ten_hinh_thuc }}</td></tr>
+    {% if hd.hinh_thuc_tt == 'tien_mat' %}
+    <tr><td>Khách đưa</td><td class="text-end">{{ hd.tien_khach_dua|so }}</td></tr>
+    <tr><td>Tiền thối</td><td class="text-end">{{ (hd.tien_khach_dua - hd.tong_tien)|so }}</td></tr>{% endif %}
+    {% if don.diem_cong %}<tr><td>Điểm cộng</td><td class="text-end">+{{ don.diem_cong }}</td></tr>
+    <tr><td>Tổng điểm</td><td class="text-end">{{ don.khach_hang.diem_tich_luy }}</td></tr>{% endif %}
+  </table>
+  <hr>
+  <div class="text-center">
+    <img src="{{ url_for('danhmuc.ma_vach_svg', chuan='code128', ma=hd.ma_hd) }}" style="width:100%;height:50px" alt="">
+    <div>Cảm ơn quý khách!</div>
+  </div>
+</div>
+</body>
+</html>

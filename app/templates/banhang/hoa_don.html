@@ -1,0 +1,31 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Hóa đơn{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 gap-2">
+  {{ m.tieu_de('Hóa đơn bán hàng', 'bi-receipt') }}
+  {% if current_user.co_quyen('hoa_don', 'in_an') %}
+  <a href="{{ url_for('banhang.hoa_don', xuat=1, **request.args) }}" class="btn btn-outline-secondary ms-auto"><i class="bi bi-file-earmark-excel"></i> Xuất Excel</a>{% endif %}
+</div>
+<div class="card">
+  <div class="card-body pb-0"><form class="row g-2 mb-3">
+    <div class="col-md-4"><input name="q" value="{{ request.args.q or '' }}" class="form-control" placeholder="Mã hóa đơn / tên khách hàng"></div>
+    <div class="col-md-3"><input type="date" name="tu" value="{{ request.args.tu or '' }}" class="form-control"></div>
+    <div class="col-md-3"><input type="date" name="den" value="{{ request.args.den or '' }}" class="form-control"></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100"><i class="bi bi-search"></i> Lọc</button></div>
+  </form></div>
+  <div class="table-responsive"><table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>Mã HĐ</th><th>Ngày lập</th><th>Khách hàng</th><th>Nguồn</th><th>Hình thức</th><th>Nhân viên</th>
+      <th class="text-end">Tổng tiền</th><th></th></tr></thead>
+    <tbody>{% for h in trang.items %}{% set d = h.don_hang %}
+      <tr><td class="fw-semibold">{{ h.ma_hd }}</td><td>{{ h.ngay_lap|ngay_gio }}</td>
+        <td>{{ d.khach_hang.ho_ten if d.khach_hang else 'Khách lẻ' }}</td>
+        <td>{{ 'Online' if d.nguon == 'online' else 'Tại quầy' }}</td><td>{{ h.ten_hinh_thuc }}</td>
+        <td>{{ h.nhan_vien.ho_ten if h.nhan_vien }}</td><td class="text-end fw-semibold">{{ h.tong_tien|vnd }}</td>
+        <td class="text-end"><a href="{{ url_for('banhang.in_hoa_don', id=h.id) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-printer"></i></a>
+          <a href="{{ url_for('banhang.don_hang_chi_tiet', id=d.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td></tr>
+    {% else %}<tr><td colspan="8" class="text-center text-muted py-4">Chưa có hóa đơn.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="card-body pt-0">{{ m.phan_trang(trang, 'banhang.hoa_don') }}</div>
+</div>
+{% endblock %}

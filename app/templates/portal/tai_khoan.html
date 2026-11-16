@@ -1,0 +1,57 @@
+{% extends 'layouts/portal.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Tài khoản{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-5">
+    {% set the = kh.the_than_thiet %}
+    {% if the and the.trang_thai %}
+    <div class="card text-white mb-3" style="background:linear-gradient(135deg,#0f5132,#198754)"><div class="card-body p-4">
+      <div class="d-flex justify-content-between"><span class="fw-bold fs-5">eMarket · Thẻ thân thiết</span><i class="bi bi-credit-card-2-front fs-3"></i></div>
+      <div class="fs-3 fw-bold my-3 font-monospace">{{ the.ma_the }}</div>
+      <div class="d-flex justify-content-between align-items-end">
+        <div>{{ kh.ho_ten }}<div class="small opacity-75">Cấp ngày {{ the.ngay_lap|ngay }}</div></div>
+        <div class="text-end"><div class="small opacity-75">Điểm tích lũy</div><div class="fs-2 fw-bold">{{ kh.diem_tich_luy|so }}</div></div>
+      </div>
+      <div class="bg-white rounded mt-3 p-2"><img src="{{ url_for('danhmuc.ma_vach_svg', chuan='code128', ma=the.ma_the) }}" style="width:100%;height:60px" alt=""></div>
+    </div></div>
+    {% else %}
+    <div class="card mb-3"><div class="card-body">
+      <h5><i class="bi bi-credit-card-2-front"></i> Thẻ thân thiết</h5>
+      {% if the %}<p class="text-danger">Thẻ của bạn đang bị khóa. Vui lòng liên hệ quầy dịch vụ.</p>
+      {% else %}<p>Bạn chưa có thẻ. Mua hàng <b>từ {{ cfg.NGUONG_THE_THAN_THIET|vnd }} trong một lần</b> để được cấp thẻ tự động.</p>
+        <div class="small text-muted">Giá trị lần mua cao nhất của bạn: {{ lan_mua|vnd }}</div>
+        <div class="progress mt-2" style="height:10px"><div class="progress-bar bg-success" style="width:{{ [lan_mua / cfg.NGUONG_THE_THAN_THIET * 100, 100]|min }}%"></div></div>{% endif %}
+    </div></div>
+    {% endif %}
+    <div class="card mb-3"><div class="card-body"><dl class="row mb-0">
+      <dt class="col-6">Mã khách hàng</dt><dd class="col-6">{{ kh.ma_kh }}</dd>
+      <dt class="col-6">Loại khách hàng</dt><dd class="col-6">{{ kh.loai_khach_hang.ten_loai if kh.loai_khach_hang else 'Thường' }}</dd>
+      <dt class="col-6">Tổng giá trị đã mua</dt><dd class="col-6">{{ kh.tong_mua|vnd }}</dd>
+      <dt class="col-6">Công nợ hiện tại</dt><dd class="col-6 {{ 'text-danger fw-bold' if tong_no > 0 }}">{{ tong_no|vnd }}</dd>
+    </dl></div></div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card mb-3"><div class="card-header">Thông tin cá nhân</div><div class="card-body">
+      <form method="post">{{ m.csrf() }}
+        <div class="row g-2">
+          <div class="col-md-6"><label class="form-label">Họ tên</label><input name="ho_ten" value="{{ kh.ho_ten }}" class="form-control" required></div>
+          <div class="col-md-6"><label class="form-label">Số điện thoại</label><input value="{{ kh.dien_thoai }}" class="form-control" disabled></div>
+          <div class="col-md-6"><label class="form-label">Email</label><input type="email" name="email" value="{{ kh.email or '' }}" class="form-control"></div>
+          <div class="col-md-6"><label class="form-label">Địa chỉ</label><input name="dia_chi" value="{{ kh.dia_chi or '' }}" class="form-control"></div>
+          <div class="col-md-6"><label class="form-label">Mật khẩu hiện tại</label><input type="password" name="mat_khau_cu" class="form-control" placeholder="Chỉ khi đổi mật khẩu"></div>
+          <div class="col-md-6"><label class="form-label">Mật khẩu mới</label><input type="password" name="mat_khau_moi" minlength="6" class="form-control"></div>
+        </div>
+        <button class="btn btn-success mt-3"><i class="bi bi-check-lg"></i> Lưu thay đổi</button>
+      </form></div></div>
+    <div class="card"><div class="card-header">Lịch sử điểm</div>
+      <div class="table-responsive" style="max-height:360px"><table class="table table-sm mb-0">
+        <thead class="table-light"><tr><th>Ngày</th><th>Nội dung</th><th>Chứng từ</th><th class="text-end">Điểm</th></tr></thead>
+        <tbody>{% for l in kh.lich_su_diem|sort(attribute='ngay', reverse=true) %}
+          <tr><td>{{ l.ngay|ngay_gio }}</td><td>{{ l.mo_ta or l.loai }}</td><td>{{ l.chung_tu or '' }}</td>
+            <td class="text-end fw-semibold {{ 'text-success' if l.so_diem > 0 else 'text-danger' }}">{{ '%+d'|format(l.so_diem) }}</td></tr>
+        {% else %}<tr><td colspan="4" class="text-center text-muted py-3">Chưa có giao dịch điểm.</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+  </div>
+</div>
+{% endblock %}

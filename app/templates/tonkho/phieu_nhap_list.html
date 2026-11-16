@@ -1,0 +1,30 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Phiếu nhập hàng{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 gap-2">
+  {{ m.tieu_de('Phiếu nhập hàng', 'bi-box-arrow-in-down') }}
+  {% if current_user.co_quyen('phieu_nhap', 'them') %}<a href="{{ url_for('tonkho.them_phieu_nhap') }}" class="btn btn-success ms-auto"><i class="bi bi-plus-lg"></i> Lập phiếu nhập</a>{% endif %}
+</div>
+<div class="card">
+  <div class="card-body pb-0"><form class="row g-2 mb-3">
+    <div class="col-md-4"><select name="ncc" class="form-select"><option value="">-- Nhà cung cấp --</option>
+      {% for n in nccs %}<option value="{{ n.id }}" {{ 'selected' if request.args.ncc == n.id|string }}>{{ n.ten_ncc }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><select name="kho_id" class="form-select"><option value="">-- Kho --</option>
+      {% for k in khos %}<option value="{{ k.id }}" {{ 'selected' if request.args.kho_id == k.id|string }}>{{ k.ten_kho }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><button class="btn btn-primary"><i class="bi bi-search"></i> Lọc</button></div>
+  </form></div>
+  <div class="table-responsive"><table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>Mã phiếu</th><th>Ngày nhập</th><th>Nhà cung cấp</th><th>Kho</th><th>Người nhập</th>
+      <th class="text-end">Tổng tiền</th><th class="text-end">Đã trả</th><th class="text-end">Còn nợ</th><th></th></tr></thead>
+    <tbody>{% for p in trang.items %}
+      <tr><td class="fw-semibold">{{ p.ma_phieu }}</td><td>{{ p.ngay_nhap|ngay_gio }}</td><td>{{ p.nha_cung_cap.ten_ncc }}</td>
+        <td>{{ p.kho.ten_kho }}</td><td>{{ p.nguoi_nhap.ho_ten if p.nguoi_nhap }}</td>
+        <td class="text-end">{{ p.tong_tien|vnd }}</td><td class="text-end">{{ p.da_thanh_toan|vnd }}</td>
+        <td class="text-end {{ 'text-danger fw-semibold' if p.tong_tien > p.da_thanh_toan }}">{{ (p.tong_tien - p.da_thanh_toan)|vnd }}</td>
+        <td class="text-end"><a href="{{ url_for('tonkho.chi_tiet_phieu_nhap', id=p.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td></tr>
+    {% else %}<tr><td colspan="9" class="text-center text-muted py-4">Chưa có phiếu nhập.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="card-body pt-0">{{ m.phan_trang(trang, 'tonkho.phieu_nhap') }}</div>
+</div>
+{% endblock %}

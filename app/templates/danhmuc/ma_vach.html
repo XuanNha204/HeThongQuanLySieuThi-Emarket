@@ -1,0 +1,38 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}In mã vạch{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 no-print">
+  {{ m.tieu_de('In tem mã vạch', 'bi-upc') }}
+  {% if tem %}<button onclick="window.print()" class="btn btn-success btn-lg ms-auto"><i class="bi bi-printer"></i> In tem</button>{% endif %}
+</div>
+<div class="card mb-3 no-print"><div class="card-body">
+  <form class="row g-2 align-items-end">
+    <div class="col-lg-5"><label class="form-label">Hàng hóa (chọn nhiều)</label>
+      <select name="hh" class="form-select" multiple size="6">
+        {% for h in tat_ca %}<option value="{{ h.id }}" {{ 'selected' if h.id in ids }}>{{ h.ma_hang }} - {{ h.ten_hang }} ({{ h.ma_vach }})</option>{% endfor %}
+      </select></div>
+    <div class="col-lg-2"><label class="form-label">Chuẩn mã vạch</label>
+      <select name="chuan" class="form-select"><option value="">Theo hàng hóa</option>
+        {% for k, t in CHUAN.items() %}<option value="{{ k }}" {{ 'selected' if chuan == k }}>{{ t }}</option>{% endfor %}</select>
+      <div class="form-text">Code128/Code39 dùng mã hàng nếu khác chuẩn gốc.</div></div>
+    <div class="col-lg-2"><label class="form-label">Số tem / mặt hàng</label>
+      <input type="number" name="so_tem" value="{{ so_tem }}" min="1" max="200" class="form-control"></div>
+    <div class="col-lg-2"><div class="form-check form-switch mb-2">
+      <input class="form-check-input" type="checkbox" name="gia" value="1" id="g" {{ 'checked' if hien_gia }}>
+      <label class="form-check-label ms-1" for="g">In giá bán</label></div></div>
+    <div class="col-lg-1"><button class="btn btn-primary w-100">Xem</button></div>
+  </form>
+</div></div>
+{% for e in loi %}<div class="alert alert-warning no-print">{{ e }}</div>{% endfor %}
+<div class="tem-grid">
+{% for hh, c, ma in tem %}{% for _ in range(so_tem) %}
+  <div class="tem">
+    <div class="ten">{{ hh.ten_hang }}</div>
+    <img src="{{ url_for('danhmuc.ma_vach_svg', chuan=c, ma=ma) }}" alt="{{ ma }}">
+    {% if hien_gia %}<div class="gia">{{ hh.gia_ban|vnd }}</div>{% endif %}
+  </div>
+{% endfor %}{% endfor %}
+</div>
+{% if not tem %}<p class="text-muted">Chọn hàng hóa để xem trước tem mã vạch.</p>{% endif %}
+{% endblock %}

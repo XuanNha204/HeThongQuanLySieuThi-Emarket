@@ -1,0 +1,38 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Phiếu nhập {{ pn.ma_phieu }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 gap-2 no-print">
+  {{ m.tieu_de('Phiếu nhập ' ~ pn.ma_phieu, 'bi-box-arrow-in-down') }}
+  <div class="ms-auto d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-outline-primary"><i class="bi bi-printer"></i> In phiếu</button>
+    <a href="{{ url_for('danhmuc.in_ma_vach', hh=pn.chi_tiets|map(attribute='hang_hoa_id')|list) }}" class="btn btn-outline-secondary"><i class="bi bi-upc"></i> In tem mã vạch</a>
+    <a href="{{ url_for('tonkho.phieu_nhap') }}" class="btn btn-light"><i class="bi bi-arrow-left"></i> Danh sách</a>
+  </div>
+</div>
+<div class="card"><div class="card-body">
+  <h4 class="text-center mb-1">PHIẾU NHẬP KHO</h4>
+  <div class="text-center text-muted mb-3">Số: {{ pn.ma_phieu }} — Ngày {{ pn.ngay_nhap|ngay_gio }}</div>
+  <div class="row mb-3">
+    <div class="col-md-6"><b>Nhà cung cấp:</b> {{ pn.nha_cung_cap.ten_ncc }} ({{ pn.nha_cung_cap.ma_ncc }})<br>
+      <b>Địa chỉ:</b> {{ pn.nha_cung_cap.dia_chi or '' }}</div>
+    <div class="col-md-6"><b>Nhập vào kho:</b> {{ pn.kho.ten_kho }}<br><b>Người nhập:</b> {{ pn.nguoi_nhap.ho_ten if pn.nguoi_nhap }}
+      {% if pn.ghi_chu %}<br><b>Ghi chú:</b> {{ pn.ghi_chu }}{% endif %}</div>
+  </div>
+  <table class="table table-bordered">
+    <thead class="table-light"><tr><th>#</th><th>Mã hàng</th><th>Tên hàng</th><th>ĐVT</th><th class="text-end">SL</th>
+      <th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th><th>HSD</th></tr></thead>
+    <tbody>{% for ct in pn.chi_tiets %}
+      <tr><td>{{ loop.index }}</td><td>{{ ct.hang_hoa.ma_hang }}</td><td>{{ ct.hang_hoa.ten_hang }}</td><td>{{ ct.hang_hoa.don_vi_tinh }}</td>
+        <td class="text-end">{{ ct.so_luong|so }}</td><td class="text-end">{{ ct.don_gia|vnd }}</td><td class="text-end">{{ ct.thanh_tien|vnd }}</td>
+        <td>{{ ct.han_su_dung|ngay }}</td></tr>{% endfor %}</tbody>
+    <tfoot>
+      <tr><th colspan="6" class="text-end">Tổng cộng</th><th class="text-end">{{ pn.tong_tien|vnd }}</th><th></th></tr>
+      <tr><td colspan="6" class="text-end">Đã thanh toán</td><td class="text-end">{{ pn.da_thanh_toan|vnd }}</td><td></td></tr>
+      <tr><td colspan="6" class="text-end">Còn nợ NCC</td><td class="text-end fw-bold text-danger">{{ (pn.tong_tien - pn.da_thanh_toan)|vnd }}</td><td></td></tr>
+    </tfoot>
+  </table>
+  <div class="row text-center mt-5"><div class="col">Người giao hàng<br><small>(Ký, ghi rõ họ tên)</small></div>
+    <div class="col">Thủ kho<br><small>(Ký, ghi rõ họ tên)</small></div><div class="col">Người lập phiếu<br><small>(Ký, ghi rõ họ tên)</small></div></div>
+</div></div>
+{% endblock %}

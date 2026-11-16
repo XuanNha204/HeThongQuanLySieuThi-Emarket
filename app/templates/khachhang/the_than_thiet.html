@@ -1,0 +1,25 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Thẻ thân thiết{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">{{ m.tieu_de('Thẻ khách hàng thân thiết', 'bi-credit-card-2-front') }}</div>
+<div class="alert alert-light border">Thẻ được lập tự động khi khách hàng có <b>1 lần mua ≥ {{ cfg.NGUONG_THE_THAN_THIET|vnd }}</b>
+  (hoặc nhân viên lập thủ công tại trang chi tiết khách hàng). Chủ thẻ được tích {{ cfg.SO_TIEN_MOI_DIEM|vnd }} = 1 điểm,
+  dùng điểm thanh toán 1 điểm = {{ cfg.GIA_TRI_MOT_DIEM|vnd }}.</div>
+<div class="card">
+  <div class="card-body pb-0"><form class="row g-2 mb-3"><div class="col-md-5">
+    <input name="q" value="{{ request.args.q or '' }}" class="form-control" placeholder="Mã thẻ, tên, số điện thoại…"></div>
+    <div class="col-auto"><button class="btn btn-primary"><i class="bi bi-search"></i></button></div></form></div>
+  <div class="table-responsive"><table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>Mã thẻ</th><th>Khách hàng</th><th>Điện thoại</th><th>Ngày lập</th><th>Chứng từ đạt ĐK</th>
+      <th class="text-end">Điểm</th><th>Trạng thái</th></tr></thead>
+    <tbody>{% for t in ds %}
+      <tr><td class="fw-semibold">{{ t.ma_the }}</td>
+        <td><a href="{{ url_for('khachhang.chi_tiet', id=t.khach_hang.id) }}">{{ t.khach_hang.ho_ten }}</a></td>
+        <td>{{ t.khach_hang.dien_thoai or '' }}</td><td>{{ t.ngay_lap|ngay }}</td>
+        <td>{{ t.chung_tu_dat_dieu_kien or '' }} ({{ t.gia_tri_dat_dieu_kien|vnd }})</td>
+        <td class="text-end fw-bold">{{ t.khach_hang.diem_tich_luy|so }}</td><td>{{ m.trang_thai(t.trang_thai, 'Hoạt động', 'Khóa') }}</td></tr>
+    {% else %}<tr><td colspan="7" class="text-muted text-center py-4">Chưa có thẻ.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

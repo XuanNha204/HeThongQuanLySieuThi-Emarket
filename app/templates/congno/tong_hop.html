@@ -1,0 +1,32 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Tổng hợp công nợ{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 gap-2">
+  {{ m.tieu_de('Tổng hợp công nợ', 'bi-people') }}
+  <a href="{{ url_for('congno.danh_sach') }}" class="btn btn-light ms-auto"><i class="bi bi-list-ul"></i> Theo chứng từ</a>
+</div>
+<div class="card mb-3"><div class="card-header">Khách hàng nợ (so với mức nợ cho phép)</div>
+  <div class="table-responsive"><table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>Khách hàng</th><th>Loại KH</th><th class="text-end">Số chứng từ</th><th class="text-end">Tổng nợ</th>
+      <th class="text-end">Quá hạn</th><th class="text-end">Mức cho phép</th><th style="width:180px">Sử dụng hạn mức</th><th></th></tr></thead>
+    <tbody>{% for d in ds %}{% set pt = (d.tong / d.han_muc * 100) if d.han_muc else 100 %}
+      <tr class="{{ 'table-danger' if d.vuot }}"><td>{{ d.kh.ho_ten }}<div class="small text-muted">{{ d.kh.ma_kh }} · {{ d.kh.dien_thoai or '' }}</div></td>
+        <td>{{ d.kh.loai_khach_hang.ten_loai if d.kh.loai_khach_hang }}</td><td class="text-end">{{ d.so_ct }}</td>
+        <td class="text-end text-nowrap fw-bold">{{ d.tong|vnd }}</td><td class="text-end text-nowrap {{ 'text-danger' if d.qua_han }}">{{ d.qua_han|vnd }}</td>
+        <td class="text-end text-nowrap">{{ d.han_muc|vnd }}</td>
+        <td><div class="progress" style="height:10px"><div class="progress-bar bg-{{ 'danger' if d.vuot else ('warning' if pt > 80 else 'success') }}" style="width:{{ [pt, 100]|min }}%"></div></div>
+          <small>{{ '%.0f'|format(pt) }}%{% if d.vuot %} — <b class="text-danger">VƯỢT MỨC</b>{% endif %}</small></td>
+        <td class="text-end"><a href="{{ url_for('congno.danh_sach', doi_tuong='khach_hang', khach_hang_id=d.kh.id) }}" class="btn btn-sm btn-outline-primary">Chứng từ</a></td></tr>
+    {% else %}<tr><td colspan="8" class="text-center text-muted py-4">Không có khách hàng nợ.</td></tr>{% endfor %}</tbody>
+  </table></div></div>
+<div class="card"><div class="card-header">Nợ nhà cung cấp</div>
+  <div class="table-responsive"><table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>Nhà cung cấp</th><th class="text-end">Số chứng từ</th><th class="text-end">Còn nợ</th><th></th></tr></thead>
+    <tbody>{% for d in ds_ncc %}
+      <tr><td>{{ d.ncc.ten_ncc }} <small class="text-muted">({{ d.ncc.ma_ncc }})</small></td><td class="text-end">{{ d.so_ct }}</td>
+        <td class="text-end text-nowrap fw-bold">{{ d.tong|vnd }}</td>
+        <td class="text-end"><a href="{{ url_for('congno.danh_sach', doi_tuong='nha_cung_cap', nha_cung_cap_id=d.ncc.id) }}" class="btn btn-sm btn-outline-primary">Chứng từ</a></td></tr>
+    {% else %}<tr><td colspan="4" class="text-center text-muted py-4">Không nợ nhà cung cấp.</td></tr>{% endfor %}</tbody>
+  </table></div></div>
+{% endblock %}

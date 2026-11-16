@@ -1,0 +1,48 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Công nợ {{ cn.ma_chung_tu }}{% endblock %}
+{% block content %}
+{% set tt = cn.trang_thai %}
+<div class="d-flex align-items-center mb-3 gap-2">
+  {{ m.tieu_de('Công nợ chứng từ ' ~ cn.ma_chung_tu, 'bi-journal-text') }}
+  <span class="badge bg-{{ tt[1] }} fs-6">{{ tt[0] }}</span>
+  <a href="{{ url_for('congno.danh_sach', doi_tuong=cn.doi_tuong) }}" class="btn btn-light ms-auto"><i class="bi bi-arrow-left"></i> Danh sách</a>
+</div>
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card mb-3"><div class="card-body"><dl class="row mb-0">
+      <dt class="col-5">{{ 'Khách hàng' if cn.doi_tuong == 'khach_hang' else 'Nhà cung cấp' }}</dt>
+      <dd class="col-7">{% if cn.khach_hang %}<a href="{{ url_for('khachhang.chi_tiet', id=cn.khach_hang_id) }}">{{ cn.ten_doi_tuong }}</a>{% else %}{{ cn.ten_doi_tuong }}{% endif %}</dd>
+      <dt class="col-5">Chứng từ</dt><dd class="col-7">{{ cn.ten_loai_chung_tu }} {{ cn.ma_chung_tu }}</dd>
+      <dt class="col-5">Ngày phát sinh</dt><dd class="col-7">{{ cn.ngay_phat_sinh|ngay }}</dd>
+      <dt class="col-5">Hạn thanh toán</dt><dd class="col-7 {{ 'text-danger fw-bold' if cn.qua_han }}">{{ cn.han_thanh_toan|ngay }}{% if cn.qua_han %} (quá {{ cn.so_ngay_qua_han }} ngày){% endif %}</dd>
+      <dt class="col-5">Số tiền</dt><dd class="col-7">{{ cn.so_tien|vnd }}</dd>
+      <dt class="col-5">Đã thanh toán</dt><dd class="col-7">{{ cn.da_thanh_toan|vnd }}</dd>
+      <dt class="col-5">Còn lại</dt><dd class="col-7 fs-4 fw-bold text-danger">{{ cn.con_lai|vnd }}</dd>
+      {% if cn.ghi_chu %}<dt class="col-5">Ghi chú</dt><dd class="col-7">{{ cn.ghi_chu }}</dd>{% endif %}
+    </dl></div></div>
+    {% if cn.con_lai > 0 and current_user.co_quyen('cong_no', 'them') %}
+    <div class="card"><div class="card-header">{{ 'Thu nợ khách hàng' if cn.doi_tuong == 'khach_hang' else 'Trả nợ nhà cung cấp' }}</div>
+      <div class="card-body"><form method="post">{{ m.csrf() }}
+        <div class="mb-2"><label class="form-label">Số tiền (đ)</label>
+          <div class="input-group"><input type="number" name="so_tien" min="1" max="{{ cn.con_lai }}" step="any" class="form-control form-control-lg" required id="soTien">
+            <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('soTien').value={{ cn.con_lai }}">Trả hết</button></div></div>
+        <div class="mb-2"><label class="form-label">Hình thức</label><select name="hinh_thuc" class="form-select">
+          {% for k, v in hinh_thucs.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+        <div class="mb-3"><label class="form-label">Ghi chú</label><input name="ghi_chu" class="form-control"></div>
+        <button class="btn btn-success btn-lg w-100"><i class="bi bi-cash-coin"></i> Ghi nhận thanh toán</button>
+      </form></div></div>
+    {% endif %}
+  </div>
+  <div class="col-lg-7">
+    <div class="card"><div class="card-header">Lịch sử thanh toán</div>
+      <div class="table-responsive"><table class="table mb-0">
+        <thead class="table-light"><tr><th>Ngày</th><th class="text-end">Số tiền</th><th>Hình thức</th><th>Người thực hiện</th><th>Ghi chú</th></tr></thead>
+        <tbody>{% for t in cn.thanh_toans %}
+          <tr><td>{{ t.ngay|ngay_gio }}</td><td class="text-end fw-semibold">{{ t.so_tien|vnd }}</td><td>{{ HINH_THUC_TT.get(t.hinh_thuc, t.hinh_thuc) }}</td>
+            <td>{{ t.nguoi_thuc_hien.ho_ten if t.nguoi_thuc_hien }}</td><td>{{ t.ghi_chu or '' }}</td></tr>
+        {% else %}<tr><td colspan="5" class="text-center text-muted py-4">Chưa có thanh toán.</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+  </div>
+</div>
+{% endblock %}

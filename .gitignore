@@ -1,0 +1,26 @@
+# Python environments and caches
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local configuration and generated data
+.env
+.env.*
+!.env.example
+instance/
+backups/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.log
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

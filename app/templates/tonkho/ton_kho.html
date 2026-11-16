@@ -1,0 +1,51 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Tồn kho{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center mb-3 gap-2">
+  {{ m.tieu_de('Tồn kho theo kho', 'bi-boxes') }}
+  <div class="ms-auto d-flex gap-2">
+    {% if current_user.co_quyen('phieu_nhap', 'them') %}<a href="{{ url_for('tonkho.them_phieu_nhap') }}" class="btn btn-success"><i class="bi bi-box-arrow-in-down"></i> Nhập hàng</a>{% endif %}
+    {% if current_user.co_quyen('ton_kho', 'in_an') %}<a href="{{ url_for('tonkho.index', xuat=1, **request.args) }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-excel"></i> Xuất Excel</a>{% endif %}
+  </div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3"><div class="card stat-card p-3"><div class="text-muted small">Tổng tồn</div><div class="fs-4 fw-bold">{{ tong.ton|so }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card p-3"><div class="text-muted small">Tổng đã bán</div><div class="fs-4 fw-bold">{{ tong.da_ban|so }}</div></div></div>
+  <div class="col-6 col-md-3"><a class="text-decoration-none" href="{{ url_for('tonkho.index', tinh_trang='thieu') }}"><div class="card stat-card p-3 border-danger"><div class="text-muted small">Dưới mức tối thiểu</div><div class="fs-4 fw-bold text-danger">{{ tong.thieu }}</div></div></a></div>
+  <div class="col-6 col-md-3"><a class="text-decoration-none" href="{{ url_for('tonkho.index', tinh_trang='vuot') }}"><div class="card stat-card p-3 border-warning"><div class="text-muted small">Vượt mức tối đa</div><div class="fs-4 fw-bold text-warning">{{ tong.vuot }}</div></div></a></div>
+</div>
+<div class="card">
+  <div class="card-body pb-0"><form class="row g-2 mb-3">
+    <div class="col-md-3"><input name="q" value="{{ request.args.q or '' }}" class="form-control" placeholder="Tên / mã hàng / mã vạch" autofocus></div>
+    <div class="col-md-3"><select name="kho_id" class="form-select"><option value="">-- Tất cả kho --</option>
+      {% for k in khos %}<option value="{{ k.id }}" {{ 'selected' if request.args.kho_id == k.id|string }}>{{ k.ten_kho }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><select name="loai" class="form-select"><option value="">-- Loại hàng --</option>
+      {% for l in loais %}<option value="{{ l.id }}" {{ 'selected' if request.args.loai == l.id|string }}>{{ l.ten_loai }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><select name="tinh_trang" class="form-select"><option value="">-- Tình trạng --</option>
+      {% for k, v in [('thieu', 'Dưới tối thiểu'), ('vuot', 'Vượt tối đa'), ('on_dinh', 'Ổn định')] %}
+      <option value="{{ k }}" {{ 'selected' if request.args.tinh_trang == k }}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><button class="btn btn-primary"><i class="bi bi-search"></i> Lọc</button></div>
+  </form></div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead class="table-light"><tr><th>Kho</th><th>Mặt hàng</th><th class="text-end">Tồn</th><th class="text-end">Đã bán</th>
+      <th>Tình trạng</th><th style="width:320px">Ngưỡng tối thiểu / tối đa</th></tr></thead>
+    <tbody>{% for t in ds %}
+      <tr class="{{ 'table-danger' if t.tinh_trang == 'thieu' else ('table-warning' if t.tinh_trang == 'vuot') }}">
+        <td>{{ t.kho.ten_kho }}</td>
+        <td>{{ t.hang_hoa.ten_hang }}<div class="small text-muted">{{ t.hang_hoa.ma_hang }} · {{ t.hang_hoa.ma_vach or '' }}</div></td>
+        <td class="text-end fw-bold">{{ t.so_luong_ton|so }} <small class="fw-normal">{{ t.hang_hoa.don_vi_tinh }}</small></td>
+        <td class="text-end">{{ t.so_luong_da_ban|so }}</td>
+        <td>{% if t.tinh_trang == 'thieu' %}<span class="badge bg-danger">Dưới tối thiểu</span>
+          {% elif t.tinh_trang == 'vuot' %}<span class="badge bg-warning text-dark">Vượt tối đa</span>
+          {% else %}<span class="badge bg-success">Ổn định</span>{% endif %}</td>
+        <td>{% if current_user.co_quyen('ton_kho', 'sua') %}
+          <form method="post" action="{{ url_for('tonkho.cap_nhat_nguong', id=t.id) }}" class="d-flex gap-1">{{ m.csrf() }}
+            <input type="number" min="0" name="muc_toi_thieu" value="{{ t.muc_toi_thieu }}" class="form-control form-control-sm" title="Tối thiểu">
+            <input type="number" min="0" name="muc_toi_da" value="{{ t.muc_toi_da }}" class="form-control form-control-sm" title="Tối đa">
+            <button class="btn btn-sm btn-outline-primary" title="Lưu"><i class="bi bi-check-lg"></i></button></form>
+          {% else %}{{ t.muc_toi_thieu }} / {{ t.muc_toi_da }}{% endif %}</td></tr>
+    {% else %}<tr><td colspan="6" class="text-center text-muted py-4">Không có dữ liệu tồn kho.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Thống kê{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center mb-3 gap-2 no-print">
+  {{ m.tieu_de('Báo cáo thống kê', 'bi-bar-chart-line') }}
+  {% if current_user.co_quyen('bao_cao', 'in_an') %}
+  <div class="ms-auto d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-outline-primary"><i class="bi bi-printer"></i> In báo cáo</button>
+    <a href="{{ url_for('thongke.index', loai=loai, tu=tu.isoformat(), den=den.isoformat(), xuat=1) }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-excel"></i> Xuất Excel</a>
+  </div>{% endif %}
+</div>
+<ul class="nav nav-pills mb-3 gap-1 no-print">
+  {% for k, v in LOAI.items() %}
+  <li class="nav-item"><a class="nav-link {{ 'active' if k == loai }}" href="{{ url_for('thongke.index', loai=k) }}">{{ v }}</a></li>{% endfor %}
+</ul>
+<form class="row g-2 mb-3 no-print">
+  <input type="hidden" name="loai" value="{{ loai }}">
+  <div class="col-auto"><label class="form-label mb-0 small">Từ ngày</label><input type="date" name="tu" value="{{ tu.isoformat() }}" class="form-control"></div>
+  <div class="col-auto"><label class="form-label mb-0 small">Đến ngày</label><input type="date" name="den" value="{{ den.isoformat() }}" class="form-control"></div>
+  <div class="col-auto align-self-end"><button class="btn btn-primary"><i class="bi bi-funnel"></i> Xem</button></div>
+</form>
+<div class="card mb-3"><div class="card-body">
+  <h5 class="text-center mb-3">{{ tieu_de }}</h5>
+  {% if dl %}<div style="height:300px" class="no-print-chart"><canvas id="bieuDo"></canvas></div>{% endif %}
+</div></div>
+<div class="card"><div class="table-responsive"><table class="table table-hover table-sm mb-0">
+  <thead class="table-light"><tr>{% for nhan, _, fmt in cot %}<th class="{{ 'text-end' if fmt }}">{{ nhan }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for d in dl %}<tr>
+    {% for _, k, fmt in cot %}
+      {% if fmt == 'vnd' %}<td class="text-end {{ 'text-danger' if d[k] < 0 }}">{{ d[k]|vnd }}</td>
+      {% elif fmt == 'so' %}<td class="text-end">{{ d[k]|so }}</td>
+      {% else %}<td>{{ d[k] }}</td>{% endif %}
+    {% endfor %}</tr>
+  {% else %}<tr><td colspan="{{ cot|length }}" class="text-center text-muted py-4">Không có số liệu trong khoảng thời gian này.</td></tr>{% endfor %}</tbody>
+  {% if dl %}<tfoot class="fw-bold"><tr>
+    {% for _, k, fmt in cot %}
+      {% if loop.first %}<td>Tổng cộng</td>
+      {% elif k in tong %}<td class="text-end">{{ tong[k]|vnd if fmt == 'vnd' else tong[k]|so }}</td>
+      {% else %}<td></td>{% endif %}
+    {% endfor %}</tr></tfoot>{% endif %}
+</table></div></div>
+{% endblock %}
+{% block scripts %}
+{% if dl %}
+<script src="{{ url_for('static', filename='vendor/chart/chart.umd.min.js') }}"></script>
+<script>
+(() => {
+  const bd = {{ bieu_do|tojson }};
+  const loai = {{ loai|tojson }};
+  const ds = [{ label: 'Doanh thu', data: bd.doanh_thu, backgroundColor: 'rgba(25,135,84,.75)' }];
+  if (bd.loi_nhuan) ds.push({ label: 'Lợi nhuận', data: bd.loi_nhuan, backgroundColor: 'rgba(13,110,253,.65)' });
+  if (bd.tien_nhap) ds.push({ label: 'Tiền nhập', data: bd.tien_nhap, backgroundColor: 'rgba(255,193,7,.75)' });
+  new Chart(document.getElementById('bieuDo'), {
+    type: 'bar',
+    data: { labels: bd.nhan, datasets: ds },
+    options: {
+      maintainAspectRatio: false, indexAxis: loai === 'hang_hoa' || loai === 'ncc' ? 'y' : 'x',
+      plugins: { tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + EM.vnd(c.raw) } } },
+      scales: { x: { ticks: { callback: function (v) { return loai === 'hang_hoa' || loai === 'ncc' ? EM.vnd(v) : this.getLabelForValue(v); } } },
+                y: { ticks: { callback: function (v) { return loai === 'hang_hoa' || loai === 'ncc' ? this.getLabelForValue(v) : EM.vnd(v); } } } }
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

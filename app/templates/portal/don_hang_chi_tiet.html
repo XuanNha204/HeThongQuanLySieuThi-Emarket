@@ -1,0 +1,41 @@
+{% extends 'layouts/portal.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Đơn {{ don.ma_don }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h4 class="mb-0">Đơn hàng {{ don.ma_don }}</h4> {{ m.badge_don(don) }}
+  <a href="{{ url_for('portal.don_hang') }}" class="btn btn-light ms-auto"><i class="bi bi-arrow-left"></i> Đơn của tôi</a>
+</div>
+<div class="row g-3">
+  <div class="col-lg-8"><div class="card">
+    <div class="table-responsive"><table class="table mb-0">
+      <thead class="table-light"><tr><th>Sản phẩm</th><th class="text-end">SL</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th></tr></thead>
+      <tbody>{% for ct in don.chi_tiets %}
+        <tr><td>{{ ct.hang_hoa.ten_hang }}</td><td class="text-end">{{ ct.so_luong }}</td><td class="text-end">{{ ct.don_gia|vnd }}</td><td class="text-end">{{ ct.thanh_tien|vnd }}</td></tr>
+      {% endfor %}</tbody>
+      <tfoot>
+        {% if don.giam_gia_diem %}<tr><td colspan="3" class="text-end">Dùng {{ don.diem_su_dung }} điểm</td><td class="text-end">-{{ don.giam_gia_diem|vnd }}</td></tr>{% endif %}
+        <tr><td colspan="3" class="text-end fw-bold">Tổng thanh toán</td><td class="text-end fw-bold fs-5 text-success">{{ don.tong_thanh_toan|vnd }}</td></tr>
+        {% if don.diem_cong %}<tr><td colspan="3" class="text-end">Điểm tích lũy được cộng</td><td class="text-end text-success">+{{ don.diem_cong }}</td></tr>{% endif %}
+      </tfoot>
+    </table></div>
+    <div class="card-body small">
+      <div><b>Chi nhánh:</b> {{ don.kho.ten_kho }}</div>
+      <div><b>Giao đến:</b> {{ don.dia_chi_giao or '—' }}</div>
+      {% if don.ghi_chu %}<div><b>Ghi chú:</b> {{ don.ghi_chu }}</div>{% endif %}
+      {% if don.hoa_don %}<div><b>Hóa đơn:</b> {{ don.hoa_don.ma_hd }} ({{ don.hoa_don.ten_hinh_thuc }})</div>{% endif %}
+    </div>
+    {% if don.trang_thai == 'cho_xu_ly' %}
+    <div class="card-body pt-0"><form method="post" action="{{ url_for('portal.huy_don', id=don.id) }}" data-confirm="Bạn chắc chắn muốn hủy đơn này?">{{ m.csrf() }}
+      <button class="btn btn-outline-danger"><i class="bi bi-x-circle"></i> Hủy đơn hàng</button>
+      <span class="small text-muted ms-2">Chỉ hủy được khi đơn chưa được xác nhận.</span></form></div>
+    {% endif %}
+  </div></div>
+  <div class="col-lg-4"><div class="card"><div class="card-header">Theo dõi đơn hàng</div><div class="card-body">
+    <ul class="timeline mb-0">{% for l in don.lich_sus %}
+      <li><b>{{ l.ten_trang_thai }}</b><div class="small text-muted">{{ l.thoi_gian|ngay_gio }}</div>
+        {% if l.ghi_chu %}<div class="small">{{ l.ghi_chu }}</div>{% endif %}</li>
+    {% endfor %}</ul>
+  </div></div></div>
+</div>
+{% endblock %}

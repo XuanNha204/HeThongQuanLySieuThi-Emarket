@@ -1,0 +1,69 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Đơn {{ don.ma_don }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center mb-3 gap-2">
+  {{ m.tieu_de('Đơn hàng ' ~ don.ma_don, 'bi-cart-check') }} {{ m.badge_don(don) }}
+  <div class="ms-auto d-flex gap-2">
+    {% if don.hoa_don %}<a href="{{ url_for('banhang.in_hoa_don', id=don.hoa_don.id) }}" target="_blank" class="btn btn-outline-primary"><i class="bi bi-printer"></i> In hóa đơn {{ don.hoa_don.ma_hd }}</a>{% endif %}
+    <a href="{{ url_for('banhang.don_hang') }}" class="btn btn-light"><i class="bi bi-arrow-left"></i> Danh sách</a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-header">Chi tiết đơn hàng</div>
+      <div class="table-responsive"><table class="table mb-0">
+        <thead class="table-light"><tr><th>Mặt hàng</th><th class="text-end">SL</th><th class="text-end">Giá niêm yết</th>
+          <th class="text-end">Đơn giá áp dụng</th><th class="text-end">Thành tiền</th><th class="text-end">Tồn kho</th></tr></thead>
+        <tbody>{% for ct in don.chi_tiets %}
+          <tr><td>{{ ct.hang_hoa.ten_hang }}<div class="small text-muted">{{ ct.hang_hoa.ma_hang }}</div></td>
+            <td class="text-end">{{ ct.so_luong }} {{ ct.hang_hoa.don_vi_tinh }}</td>
+            <td class="text-end">{{ ct.gia_niem_yet|vnd }}</td>
+            <td class="text-end {{ 'text-success fw-semibold' if ct.don_gia < ct.gia_niem_yet }}">{{ ct.don_gia|vnd }}</td>
+            <td class="text-end fw-semibold">{{ ct.thanh_tien|vnd }}</td>
+            {% set ton = ct.hang_hoa.ton_tai_kho(don.kho_id) %}
+            <td class="text-end {{ 'text-danger fw-bold' if ton < ct.so_luong and not don.hoa_don }}">{{ ton }}</td></tr>
+        {% endfor %}</tbody>
+        <tfoot>
+          <tr><td colspan="4" class="text-end">Tổng tiền hàng</td><td class="text-end fw-bold">{{ don.tong_tien_hang|vnd }}</td><td></td></tr>
+          {% if don.giam_gia_diem %}<tr><td colspan="4" class="text-end">Dùng {{ don.diem_su_dung }} điểm</td><td class="text-end">-{{ don.giam_gia_diem|vnd }}</td><td></td></tr>{% endif %}
+          <tr><td colspan="4" class="text-end fs-5">Thanh toán</td><td class="text-end fs-5 fw-bold text-success">{{ don.tong_thanh_toan|vnd }}</td><td></td></tr>
+        </tfoot>
+      </table></div></div>
+    {% if don.trang_thai_tiep and current_user.co_quyen('don_hang', 'sua') %}
+    <div class="card"><div class="card-header">Xử lý đơn hàng</div><div class="card-body">
+      <form method="post" action="{{ url_for('banhang.cap_nhat_trang_thai', id=don.id) }}" class="row g-2 align-items-end">
+        {{ m.csrf() }}
+        <div class="col-md-5"><label class="form-label">Ghi chú xử lý</label><input name="ghi_chu" class="form-control" placeholder="Không bắt buộc"></div>
+        <div class="col-md-3"><label class="form-label">Hình thức TT (khi hoàn thành)</label>
+          <select name="hinh_thuc_tt" class="form-select">{% for k, v in HINH_THUC_TT.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+        <div class="col-md-4 d-flex flex-wrap gap-2">
+          {% for tt in don.trang_thai_tiep %}{% set info = TRANG_THAI_DON[tt] %}
+          <button name="trang_thai" value="{{ tt }}" class="btn btn-{{ info[1] }} btn-lg flex-fill"
+            {% if tt == 'da_huy' %}onclick="return confirm('Hủy đơn hàng này?')"{% endif %}>{{ info[0] }}</button>
+          {% endfor %}
+        </div>
+      </form>
+      <div class="form-text mt-2">Khi chuyển sang <b>Hoàn thành</b>: hệ thống trừ tồn kho, lập hóa đơn, tích điểm/lập thẻ thân thiết và ghi công nợ nếu chọn "Ghi nợ".</div>
+    </div></div>
+    {% endif %}
+  </div>
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-5">Khách hàng</dt><dd class="col-7">{% if don.khach_hang %}<a href="{{ url_for('khachhang.chi_tiet', id=don.khach_hang.id) }}">{{ don.khach_hang.ho_ten }}</a><br><small>{{ don.khach_hang.dien_thoai }}</small>{% else %}Khách lẻ{% endif %}</dd>
+        <dt class="col-5">Nguồn</dt><dd class="col-7">{{ 'Đặt online' if don.nguon == 'online' else 'Tại quầy' }}</dd>
+        <dt class="col-5">Kho xuất</dt><dd class="col-7">{{ don.kho.ten_kho }}</dd>
+        <dt class="col-5">Ngày đặt</dt><dd class="col-7">{{ don.ngay_dat|ngay_gio }}</dd>
+        <dt class="col-5">Giao đến</dt><dd class="col-7">{{ don.dia_chi_giao or '—' }}</dd>
+        <dt class="col-5">Ghi chú</dt><dd class="col-7">{{ don.ghi_chu or '—' }}</dd>
+        {% if don.nguoi_xu_ly %}<dt class="col-5">NV xử lý</dt><dd class="col-7">{{ don.nguoi_xu_ly.ho_ten }}</dd>{% endif %}
+      </dl></div></div>
+    <div class="card"><div class="card-header">Theo dõi trạng thái</div><div class="card-body">
+      <ul class="timeline mb-0">{% for l in don.lich_sus %}
+        <li><b>{{ l.ten_trang_thai }}</b> <small class="text-muted">{{ l.thoi_gian|ngay_gio }}</small>
+          <div class="small">{{ l.nguoi_thuc_hien or '' }}{% if l.ghi_chu %} — {{ l.ghi_chu }}{% endif %}</div></li>
+      {% endfor %}</ul></div></div>
+  </div>
+</div>
+{% endblock %}

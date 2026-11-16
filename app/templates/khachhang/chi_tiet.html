@@ -1,0 +1,81 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}{{ kh.ho_ten }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center mb-3 gap-2">
+  {{ m.tieu_de(kh.ho_ten ~ ' (' ~ kh.ma_kh ~ ')', 'bi-person-vcard') }}
+  <div class="ms-auto d-flex gap-2">
+    {% if current_user.co_quyen('gia_ban') %}
+    <a href="{{ url_for('banhang.gia_ban', kh_id=kh.id) }}" class="btn btn-outline-primary"><i class="bi bi-currency-exchange"></i> Giá riêng</a>{% endif %}
+    {% if current_user.co_quyen('khach_hang', 'sua') %}
+    <a href="{{ url_for('khachhang.kh_sua', id=kh.id, next=request.path) }}" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> Sửa</a>{% endif %}
+    <a href="{{ url_for('khachhang.kh_list') }}" class="btn btn-light"><i class="bi bi-arrow-left"></i></a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-header">Thông tin</div><div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-5">Điện thoại</dt><dd class="col-7">{{ kh.dien_thoai or '' }}</dd>
+        <dt class="col-5">Email</dt><dd class="col-7">{{ kh.email or '' }}</dd>
+        <dt class="col-5">Địa chỉ</dt><dd class="col-7">{{ kh.dia_chi or '' }}</dd>
+        <dt class="col-5">Loại KH</dt><dd class="col-7">{{ kh.loai_khach_hang.ten_loai if kh.loai_khach_hang else 'Chưa phân loại' }}</dd>
+        <dt class="col-5">Tổng mua</dt><dd class="col-7 fw-bold">{{ kh.tong_mua|vnd }}</dd>
+        <dt class="col-5">Công nợ</dt><dd class="col-7 {{ 'text-danger fw-bold' if tong_no > kh.han_muc_no_ap_dung }}">{{ tong_no|vnd }} / hạn mức {{ kh.han_muc_no_ap_dung|vnd }}</dd>
+        <dt class="col-5">Tài khoản online</dt><dd class="col-7">{{ m.trang_thai(kh.mat_khau_hash, 'Đã kích hoạt', 'Chưa') }}</dd>
+      </dl></div></div>
+    <div class="card"><div class="card-header"><i class="bi bi-credit-card-2-front"></i> Thẻ thân thiết</div><div class="card-body">
+      {% if kh.the_than_thiet %}{% set t = kh.the_than_thiet %}
+        <div class="p-3 rounded-3 text-white mb-3" style="background:linear-gradient(135deg,#0f3d2e,#198754)">
+          <div class="small opacity-75">eMarket Member</div>
+          <div class="fs-4 fw-bold">{{ t.ma_the }}</div>
+          <div>{{ kh.ho_ten }}</div>
+          <div class="d-flex mt-2"><span>Điểm: <b class="fs-5">{{ kh.diem_tich_luy|so }}</b></span>
+            <span class="ms-auto">{{ m.trang_thai(t.trang_thai, 'Hoạt động', 'Đã khóa') }}</span></div>
+        </div>
+        <div class="small text-muted">Lập ngày {{ t.ngay_lap|ngay }} · đạt điều kiện qua {{ t.chung_tu_dat_dieu_kien or '—' }} ({{ t.gia_tri_dat_dieu_kien|vnd }})</div>
+        <div class="small text-muted">Quy đổi: {{ cfg.SO_TIEN_MOI_DIEM|vnd }} = 1 điểm · 1 điểm = {{ cfg.GIA_TRI_MOT_DIEM|vnd }}</div>
+        {% if current_user.co_quyen('khach_hang', 'sua') %}
+        <form method="post" action="{{ url_for('khachhang.khoa_the', id=kh.id) }}" class="mt-2">{{ m.csrf() }}
+          <button class="btn btn-sm btn-outline-{{ 'danger' if t.trang_thai else 'success' }}">{{ 'Khóa thẻ' if t.trang_thai else 'Mở khóa thẻ' }}</button></form>
+        {% endif %}
+      {% else %}
+        <p>Chưa có thẻ. Điều kiện: có <b>1 lần mua ≥ {{ cfg.NGUONG_THE_THAN_THIET|vnd }}</b>.</p>
+        <p class="small text-muted">Lần mua cao nhất: {{ lan_mua|vnd }} {% if ma_hd %}({{ ma_hd }}){% endif %}</p>
+        {% if current_user.co_quyen('khach_hang', 'them') %}
+        <form method="post" action="{{ url_for('khachhang.lap_the', id=kh.id) }}">{{ m.csrf() }}
+          <button class="btn btn-success"><i class="bi bi-plus-circle"></i> Lập thẻ thân thiết</button></form>{% endif %}
+      {% endif %}
+    </div></div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-header">Lịch sử mua hàng</div>
+      <div class="table-responsive"><table class="table table-hover mb-0">
+        <thead class="table-light"><tr><th>Mã đơn</th><th>Ngày</th><th>Nguồn</th><th>Trạng thái</th><th class="text-end">Thanh toán</th><th class="text-end">Điểm</th></tr></thead>
+        <tbody>{% for d in don_hangs %}
+          <tr><td><a href="{{ url_for('banhang.don_hang_chi_tiet', id=d.id) }}">{{ d.ma_don }}</a></td><td>{{ d.ngay_dat|ngay_gio }}</td>
+            <td>{{ 'Online' if d.nguon == 'online' else 'Tại quầy' }}</td><td>{{ m.badge_don(d) }}</td>
+            <td class="text-end">{{ d.tong_thanh_toan|vnd }}</td>
+            <td class="text-end">{% if d.diem_cong %}+{{ d.diem_cong }}{% endif %}{% if d.diem_su_dung %} -{{ d.diem_su_dung }}{% endif %}</td></tr>
+        {% else %}<tr><td colspan="6" class="text-muted">Chưa có đơn hàng.</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+    <div class="card mb-3"><div class="card-header">Lịch sử điểm tích lũy</div>
+      <div class="table-responsive"><table class="table mb-0">
+        <thead class="table-light"><tr><th>Ngày</th><th>Nội dung</th><th>Chứng từ</th><th class="text-end">Điểm</th></tr></thead>
+        <tbody>{% for l in kh.lich_su_diem[:30] %}
+          <tr><td>{{ l.ngay|ngay_gio }}</td><td>{{ l.mo_ta }}</td><td>{{ l.chung_tu or '' }}</td>
+            <td class="text-end fw-semibold text-{{ 'success' if l.so_diem > 0 else 'danger' }}">{{ '%+d'|format(l.so_diem) }}</td></tr>
+        {% else %}<tr><td colspan="4" class="text-muted">Chưa có biến động điểm.</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+    <div class="card"><div class="card-header d-flex">Công nợ theo chứng từ
+      {% if current_user.co_quyen('cong_no') %}<a class="ms-auto small" href="{{ url_for('congno.danh_sach', khach_hang_id=kh.id, trang_thai='tat_ca') }}">Xem công nợ</a>{% endif %}</div>
+      <div class="table-responsive"><table class="table mb-0">
+        <thead class="table-light"><tr><th>Chứng từ</th><th>Hạn</th><th class="text-end">Số tiền</th><th class="text-end">Còn lại</th><th>Trạng thái</th></tr></thead>
+        <tbody>{% for c in kh.cong_nos %}
+          <tr><td>{{ c.ma_chung_tu }}</td><td>{{ c.han_thanh_toan|ngay }}</td><td class="text-end">{{ c.so_tien|vnd }}</td>
+            <td class="text-end">{{ c.con_lai|vnd }}</td><td><span class="badge bg-{{ c.trang_thai[1] }}">{{ c.trang_thai[0] }}</span></td></tr>
+        {% else %}<tr><td colspan="5" class="text-muted">Không có công nợ.</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+  </div>
+</div>
+{% endblock %}

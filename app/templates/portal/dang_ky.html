@@ -1,0 +1,22 @@
+{% extends 'layouts/portal.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Đăng ký{% endblock %}
+{% block content %}
+{% set f = request.form %}
+<div class="card mx-auto" style="max-width:560px"><div class="card-body p-4">
+  <h4 class="mb-1 text-center">Đăng ký tài khoản</h4>
+  <p class="text-center text-muted small">Nếu bạn đã từng mua tại quầy, hãy dùng đúng số điện thoại đã cung cấp để giữ lịch sử mua hàng và điểm.</p>
+  <form method="post">{{ m.csrf() }}
+    <div class="row g-2">
+      <div class="col-md-6"><label class="form-label">Họ tên *</label><input name="ho_ten" value="{{ f.ho_ten or '' }}" class="form-control" required></div>
+      <div class="col-md-6"><label class="form-label">Số điện thoại *</label><input name="dien_thoai" value="{{ f.dien_thoai or '' }}" class="form-control" inputmode="tel" pattern="[0-9]{9,11}" required></div>
+      <div class="col-12"><label class="form-label">Email</label><input type="email" name="email" value="{{ f.email or '' }}" class="form-control"></div>
+      <div class="col-12"><label class="form-label">Địa chỉ</label><input name="dia_chi" value="{{ f.dia_chi or '' }}" class="form-control"></div>
+      <div class="col-md-6"><label class="form-label">Mật khẩu *</label><input type="password" name="mat_khau" minlength="6" class="form-control" required></div>
+      <div class="col-md-6"><label class="form-label">Nhập lại mật khẩu *</label><input type="password" name="nhap_lai" minlength="6" class="form-control" required></div>
+    </div>
+    <button class="btn btn-success btn-lg w-100 mt-3">Đăng ký</button>
+  </form>
+  <div class="text-center mt-3">Đã có tài khoản? <a href="{{ url_for('portal.dang_nhap') }}">Đăng nhập</a></div>
+</div></div>
+{% endblock %}

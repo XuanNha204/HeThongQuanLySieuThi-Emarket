@@ -1,0 +1,83 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}{{ v.tieu_de }}{% endblock %}
+{% block content %}
+{% set quyen = v.co_quyen %}
+<div class="d-flex flex-wrap align-items-center mb-3 gap-2">
+  {{ m.tieu_de(v.tieu_de, v.bieu_tuong) }}
+  <div class="ms-auto d-flex flex-wrap gap-2">
+    {% if quyen.them %}
+    <a href="{{ url_for(v.ep('them')) }}" class="btn btn-success"><i class="bi bi-plus-lg"></i> Thêm mới</a>
+    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#nhapExcel"><i class="bi bi-file-earmark-arrow-up"></i> Nhập Excel</button>
+    {% endif %}
+    {% if quyen.in_an %}
+    <a href="{{ url_for(v.ep('xuat'), **request.args) }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-excel"></i> Xuất Excel</a>
+    {% endif %}
+    {% block nut_them %}{% endblock %}
+  </div>
+</div>
+<div class="card">
+  <div class="card-body pb-0">
+    <form class="row g-2 mb-3 no-print">
+      <div class="col-md-5"><input name="q" value="{{ request.args.q or '' }}" class="form-control" placeholder="Tìm kiếm…"></div>
+      {% if v.ten == 'hang_hoa' %}
+      {% set loai_t = v.truong|selectattr('ten', 'equalto', 'loai_hang_id')|first %}
+      {% set ncc_t = v.truong|selectattr('ten', 'equalto', 'nha_cung_cap_id')|first %}
+      <div class="col-md-3"><select name="loai" class="form-select"><option value="">-- Loại hàng --</option>
+        {% for val, nhan in loai_t.lua_chon() %}<option value="{{ val }}" {{ 'selected' if request.args.loai == val|string }}>{{ nhan }}</option>{% endfor %}</select></div>
+      <div class="col-md-2"><select name="ncc" class="form-select"><option value="">-- NCC --</option>
+        {% for val, nhan in ncc_t.lua_chon() %}<option value="{{ val }}" {{ 'selected' if request.args.ncc == val|string }}>{{ nhan }}</option>{% endfor %}</select></div>
+      {% endif %}
+      <div class="col-auto"><button class="btn btn-primary"><i class="bi bi-search"></i> Tìm</button></div>
+    </form>
+  </div>
+  <div class="table-responsive">
+  <table class="table table-hover mb-0">
+    <thead class="table-light"><tr>
+      {% for _, nhan, fmt in v.cot %}<th class="{{ 'text-end' if fmt in ('vnd', 'so') }}">{{ nhan }}</th>{% endfor %}
+      <th class="text-end no-print">Thao tác</th></tr></thead>
+    <tbody>
+    {% for o in trang.items %}
+      <tr>
+      {% for path, _, fmt in v.cot %}{% set gt = lay(o, path) %}
+        {% if fmt == 'vnd' %}<td class="text-end">{{ gt|vnd }}</td>
+        {% elif fmt == 'so' %}<td class="text-end">{{ gt|so }}</td>
+        {% elif fmt == 'ngay' %}<td>{{ gt|ngay }}</td>
+        {% elif fmt == 'bool' %}<td>{{ m.trang_thai(gt) }}</td>
+        {% else %}<td>{{ gt if gt is not none }}</td>{% endif %}
+      {% endfor %}
+        <td class="text-end text-nowrap no-print">
+          {% for nhan, endpoint, icon in v.hanh_dong %}
+          <a href="{{ url_for(endpoint, id=o.id) }}" class="btn btn-sm btn-outline-primary" title="{{ nhan }}"><i class="bi {{ icon }}"></i></a>
+          {% endfor %}
+          {% if quyen.sua %}<a href="{{ url_for(v.ep('sua'), id=o.id) }}" class="btn btn-sm btn-outline-secondary" title="Sửa"><i class="bi bi-pencil"></i></a>{% endif %}
+          {% if quyen.xoa %}
+          <form method="post" action="{{ url_for(v.ep('xoa'), id=o.id) }}" class="d-inline" data-confirm="Xóa {{ o }}?">
+            {{ m.csrf() }}<button class="btn btn-sm btn-outline-danger" title="Xóa"><i class="bi bi-trash"></i></button></form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="{{ v.cot|length + 1 }}" class="text-center text-muted py-4">Chưa có dữ liệu.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="card-body pt-0">{{ m.phan_trang(trang, v.ep('list')) }}</div>
+</div>
+
+<div class="modal fade" id="nhapExcel" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <form method="post" action="{{ url_for(v.ep('nhap')) }}" enctype="multipart/form-data">
+    {{ m.csrf() }}
+    <div class="modal-header"><h5 class="modal-title">Nhập {{ v.tieu_de|lower }} từ Excel</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <p class="small text-muted">Dòng đầu là tiêu đề cột. Dòng có <b>{{ (v.truong|selectattr('ten', 'equalto', v.cot_ma)|first).nhan }}</b> đã tồn tại sẽ được cập nhật, chưa có sẽ thêm mới.
+        Cột dạng chọn (loại, NCC…) nhập theo <b>mã</b>. Nếu có dòng lỗi, toàn bộ file không được lưu.</p>
+      <a href="{{ url_for(v.ep('mau')) }}" class="btn btn-sm btn-outline-secondary mb-3"><i class="bi bi-download"></i> Tải file mẫu</a>
+      <input type="file" name="file" accept=".xlsx" class="form-control" required>
+    </div>
+    <div class="modal-footer"><button class="btn btn-success"><i class="bi bi-upload"></i> Nhập dữ liệu</button></div>
+  </form>
+</div></div></div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Người dùng{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 gap-2">
+  {{ m.tieu_de('Người dùng & phân quyền', 'bi-shield-lock') }}
+  {% if current_user.co_quyen('he_thong', 'sua') %}<a href="{{ url_for('hethong.nguoi_dung_form') }}" class="btn btn-success ms-auto"><i class="bi bi-person-plus"></i> Thêm người dùng</a>{% endif %}
+</div>
+<div class="card"><div class="table-responsive"><table class="table table-hover mb-0">
+  <thead class="table-light"><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th>Liên hệ</th><th>Chức năng được xem</th><th>Trạng thái</th><th></th></tr></thead>
+  <tbody>{% for nd in ds %}
+    <tr><td class="fw-semibold">{{ nd.username }}</td><td>{{ nd.ho_ten }}</td><td>{{ nd.ten_vai_tro }}</td>
+      <td class="small">{{ nd.dien_thoai or '' }}<br>{{ nd.email or '' }}</td>
+      <td>{% if nd.is_admin %}<span class="badge bg-dark">Toàn quyền</span>{% else %}
+        {% for pq in nd.phan_quyens if pq.xem %}<span class="badge bg-light text-dark border me-1">{{ CHUC_NANG[pq.chuc_nang].split('(')[0] }}</span>{% endfor %}{% endif %}</td>
+      <td>{{ m.trang_thai(nd.trang_thai, 'Hoạt động', 'Đã khóa') }}</td>
+      <td class="text-end">{% if current_user.co_quyen('he_thong', 'sua') %}<a href="{{ url_for('hethong.nguoi_dung_form', id=nd.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> Sửa / phân quyền</a>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

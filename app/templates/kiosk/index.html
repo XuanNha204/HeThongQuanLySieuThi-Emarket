@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Tra cứu sản phẩm · eMarket</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/icons/bootstrap-icons.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="kiosk">
+<div class="container-fluid py-4 px-lg-5">
+  <div class="d-flex align-items-center mb-4">
+    <h1 class="fw-bold mb-0" role="button" id="veDau"><i class="bi bi-basket2-fill"></i> eMarket</h1>
+    <div class="ms-auto fs-4 text-white-50">Tra cứu giá · hạn sử dụng · thông tin sản phẩm</div>
+  </div>
+  <div class="input-group mb-3">
+    <span class="input-group-text kiosk-search bg-white border-0"><i class="bi bi-upc-scan fs-2 text-success"></i></span>
+    <input id="q" class="form-control kiosk-search border-0" placeholder="Quét mã vạch hoặc nhập tên sản phẩm…" autofocus autocomplete="off">
+    <button class="btn btn-warning kiosk-btn px-4" id="tim"><i class="bi bi-search"></i> Tìm</button>
+  </div>
+  <div class="d-flex flex-wrap gap-2 mb-4" id="loais">
+    {% for l in loais %}<button class="btn btn-light kiosk-btn px-4" data-loai="{{ l.id }}">{{ l.ten_loai }}</button>{% endfor %}
+  </div>
+  <div id="thongBao" class="text-center fs-3 py-5">
+    <i class="bi bi-upc-scan" style="font-size:6rem"></i><br>Đưa mã vạch sản phẩm vào máy quét hoặc chạm vào một nhóm hàng
+  </div>
+  <div class="row g-3" id="ketQua"></div>
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script>
+(() => {
+  const API = {{ url_for('kiosk.tra_cuu')|tojson }};
+  const RESET = {{ cfg.KIOSK_TU_RESET_GIAY|int }} * 1000;
+  const $q = document.getElementById('q'), $kq = document.getElementById('ketQua'), $tb = document.getElementById('thongBao');
+  const macDinh = $tb.innerHTML;
+  let hen = null;
+
+  const hsd = (h) => {
+    if (!h.hsd) return '<span class="text-muted">Không áp dụng</span>';
+    const n = h.so_ngay_con_han;
+    const mau = n < 0 ? 'danger' : (n <= 7 ? 'warning' : 'success');
+    const chu = n < 0 ? 'Đã hết hạn' : (n === 0 ? 'Hết hạn hôm nay' : `Còn ${n} ngày`);
+    return `<b>${h.hsd}</b> <span class="badge bg-${mau} fs-6">${chu}</span>`;
+  };
+  const the = (h, lon) => `
+    <div class="${lon ? 'col-12' : 'col-md-6 col-xl-4'}"><div class="kiosk-card h-100">
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="${lon ? 'fs-2' : 'fs-4'} fw-bold">${EM.esc(h.ten)}</div>
+        ${h.con_hang ? '<span class="badge bg-success fs-6">Còn hàng</span>' : '<span class="badge bg-secondary fs-6">Tạm hết</span>'}
+      </div>
+      <div class="gia my-2">${EM.vnd(h.gia)} <small class="fs-5 text-muted fw-normal">/ ${EM.esc(h.dvt)}</small></div>
+      <table class="table table-sm mb-0 ${lon ? 'fs-5' : ''}">
+        <tr><td class="text-muted" style="width:40%">Hạn sử dụng</td><td>${hsd(h)}</td></tr>
+        <tr><td class="text-muted">Nhóm hàng</td><td>${EM.esc(h.loai)}</td></tr>
+        <tr><td class="text-muted">Xuất xứ</td><td>${EM.esc(h.xuat_xu) || '—'}</td></tr>
+        <tr><td class="text-muted">Nhà cung cấp</td><td>${EM.esc(h.ncc) || '—'}</td></tr>
+        <tr><td class="text-muted">Mã vạch</td><td>${EM.esc(h.ma_vach) || '—'}</td></tr>
+        ${h.mo_ta ? `<tr><td colspan="2">${EM.esc(h.mo_ta)}</td></tr>` : ''}
+      </table>
+    </div></div>`;
+
+  const hienThi = (ds, tu) => {
+    $kq.innerHTML = '';
+    if (!ds.length) { $tb.innerHTML = `<i class="bi bi-emoji-frown" style="font-size:5rem"></i><br>Không tìm thấy sản phẩm "${EM.esc(tu)}"`; $tb.hidden = false; return; }
+    $tb.hidden = true;
+    $kq.innerHTML = ds.map(h => the(h, ds.length === 1)).join('');
+  };
+  const traCuu = async (params, tu) => {
+    const ds = await EM.getJSON(API + '?' + new URLSearchParams(params));
+    hienThi(ds, tu);
+    henReset();
+  };
+  const veDau = () => { $kq.innerHTML = ''; $tb.innerHTML = macDinh; $tb.hidden = false; $q.value = ''; $q.focus(); };
+  const henReset = () => { clearTimeout(hen); hen = setTimeout(veDau, RESET); };
+
+  const tim = () => { const v = $q.value.trim(); if (v) traCuu({ q: v }, v); $q.select(); };
+  $q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tim(); } });
+  document.getElementById('tim').addEventListener('click', tim);
+  document.getElementById('veDau').addEventListener('click', veDau);
+  document.querySelectorAll('[data-loai]').forEach(b => b.addEventListener('click', () => traCuu({ loai: b.dataset.loai }, b.textContent)));
+  ['click', 'touchstart', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if ($kq.innerHTML) henReset(); }));
+  // luon giu con tro o o quet ma vach
+  document.addEventListener('click', (e) => { if (!e.target.closest('input')) setTimeout(() => $q.focus(), 50); });
+})();
+</script>
+</body>
+</html>

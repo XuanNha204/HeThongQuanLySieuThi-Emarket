@@ -1,0 +1,16 @@
+{% extends 'layouts/portal.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Đăng nhập{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width:440px"><div class="card-body p-4">
+  <h4 class="mb-3 text-center">Đăng nhập khách hàng</h4>
+  <form method="post">{{ m.csrf() }}
+    <div class="mb-3"><label class="form-label">Số điện thoại</label>
+      <input name="dien_thoai" value="{{ request.form.dien_thoai or '' }}" class="form-control form-control-lg" inputmode="tel" required autofocus></div>
+    <div class="mb-3"><label class="form-label">Mật khẩu</label><input type="password" name="mat_khau" class="form-control form-control-lg" required></div>
+    <button class="btn btn-success btn-lg w-100">Đăng nhập</button>
+  </form>
+  <div class="text-center mt-3">Chưa có tài khoản? <a href="{{ url_for('portal.dang_ky') }}">Đăng ký ngay</a></div>
+  <div class="text-center mt-2 small"><a href="{{ url_for('auth.login') }}" class="text-muted">Đăng nhập nhân viên</a></div>
+</div></div>
+{% endblock %}

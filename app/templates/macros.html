@@ -1,0 +1,30 @@
+{% macro phan_trang(trang, endpoint) -%}
+{% if trang.pages > 1 %}
+<nav class="mt-3 no-print"><ul class="pagination mb-0 flex-wrap">
+  {% set args = request.args.to_dict() %}
+  {% if trang.has_prev %}{% set _ = args.update(page=trang.prev_num) %}
+  <li class="page-item"><a class="page-link" href="{{ url_for(endpoint, **args) }}">&laquo;</a></li>{% endif %}
+  {% for p in trang.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+    {% if p %}{% set _ = args.update(page=p) %}
+    <li class="page-item {{ 'active' if p == trang.page }}"><a class="page-link" href="{{ url_for(endpoint, **args) }}">{{ p }}</a></li>
+    {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+  {% endfor %}
+  {% if trang.has_next %}{% set _ = args.update(page=trang.next_num) %}
+  <li class="page-item"><a class="page-link" href="{{ url_for(endpoint, **args) }}">&raquo;</a></li>{% endif %}
+</ul><div class="small text-muted mt-1">Tổng {{ trang.total }} dòng</div></nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro trang_thai(b, co='Đang dùng', khong='Ngừng') -%}
+<span class="badge bg-{{ 'success' if b else 'secondary' }}">{{ co if b else khong }}</span>
+{%- endmacro %}
+
+{% macro badge_don(don) -%}
+<span class="badge bg-{{ don.mau_trang_thai }}">{{ don.ten_trang_thai }}</span>
+{%- endmacro %}
+
+{% macro csrf() -%}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{%- endmacro %}
+
+{% macro tieu_de(text, icon='') -%}
+<h3 class="page-title">{% if icon %}<i class="bi {{ icon }} text-success"></i> {% endif %}{{ text }}</h3>
+{%- endmacro %}

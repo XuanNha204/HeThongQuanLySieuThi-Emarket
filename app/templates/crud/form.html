@@ -1,0 +1,54 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% set moi = obj.id is none %}
+{% block title %}{{ 'Thêm' if moi else 'Sửa' }} {{ v.tieu_de|lower }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">
+  {{ m.tieu_de(('Thêm ' if moi else 'Cập nhật ') ~ v.tieu_de|lower, v.bieu_tuong) }}
+  <a href="{{ url_for(v.ep('list')) }}" class="btn btn-light ms-auto"><i class="bi bi-arrow-left"></i> Danh sách</a>
+</div>
+<div class="card"><div class="card-body">
+<form method="post" novalidate>
+  {{ m.csrf() }}
+  <div class="row g-3">
+  {% for t in v.truong %}{% set gt = v.gia_tri_form(obj, t, du_lieu) %}
+    <div class="col-md-{{ t.rong }}">
+    {% if t.kieu == 'bool' %}
+      {% set checked = (gt in ('1', 'on', True)) if du_lieu else (gt if not moi else True) %}
+      <div class="form-check form-switch mt-md-4 pt-md-2">
+        <input class="form-check-input" type="checkbox" role="switch" name="{{ t.ten }}" id="f_{{ t.ten }}" value="1" {{ 'checked' if checked }}>
+        <label class="form-check-label ms-2" for="f_{{ t.ten }}">{{ t.nhan }}</label></div>
+    {% else %}
+      <label class="form-label" for="f_{{ t.ten }}">{{ t.nhan }}{% if t.bat_buoc %} <span class="text-danger">*</span>{% endif %}</label>
+      {% if t.kieu == 'select' %}
+        <select name="{{ t.ten }}" id="f_{{ t.ten }}" class="form-select">
+          {% if not t.bat_buoc %}<option value="">-- Không chọn --</option>{% endif %}
+          {% for val, nhan in t.lua_chon() %}
+          <option value="{{ val }}" {{ 'selected' if gt|string == val|string }}>{{ nhan }}</option>{% endfor %}
+        </select>
+      {% elif t.kieu == 'textarea' %}
+        <textarea name="{{ t.ten }}" id="f_{{ t.ten }}" rows="3" class="form-control">{{ gt }}</textarea>
+      {% else %}
+        <input name="{{ t.ten }}" id="f_{{ t.ten }}" value="{{ gt }}" class="form-control"
+          type="{{ {'number': 'number', 'date': 'date', 'email': 'email', 'password': 'password'}.get(t.kieu, 'text') }}"
+          {% if t.kieu == 'number' %}step="any"{% if t.min is not none %} min="{{ t.min }}"{% endif %}{% endif %}
+          {% if t.kieu == 'password' %}autocomplete="new-password"{% endif %}>
+      {% endif %}
+      {% if t.goi_y %}<div class="form-text">{{ t.goi_y }}</div>{% endif %}
+    {% endif %}
+    </div>
+  {% endfor %}
+  </div>
+  <div class="mt-4 d-flex gap-2">
+    <button class="btn btn-success btn-lg"><i class="bi bi-check-lg"></i> Lưu</button>
+    <a href="{{ url_for(v.ep('list')) }}" class="btn btn-light btn-lg">Hủy</a>
+  </div>
+</form>
+</div></div>
+{% if not moi and v.ten == 'hang_hoa' and obj.ma_vach %}
+<div class="card mt-3"><div class="card-body d-flex align-items-center gap-3">
+  <img src="{{ url_for('danhmuc.ma_vach_svg', chuan=obj.chuan_ma_vach, ma=obj.ma_vach) }}" style="height:90px" alt="">
+  <a href="{{ url_for('danhmuc.in_ma_vach', id=obj.id) }}" class="btn btn-outline-primary"><i class="bi bi-printer"></i> In tem mã vạch</a>
+</div></div>
+{% endif %}
+{% endblock %}

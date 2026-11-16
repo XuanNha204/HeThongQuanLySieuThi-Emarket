@@ -1,0 +1,49 @@
+{% extends 'layouts/base.html' %}
+{% import 'macros.html' as m %}
+{% block title %}Công nợ{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center mb-3 gap-2">
+  {{ m.tieu_de('Công nợ theo chứng từ', 'bi-journal-text') }}
+  <div class="ms-auto d-flex gap-2">
+    <a href="{{ url_for('congno.tong_hop') }}" class="btn btn-outline-primary"><i class="bi bi-people"></i> Tổng hợp theo đối tượng</a>
+    {% if current_user.co_quyen('cong_no', 'in_an') %}<a href="{{ url_for('congno.danh_sach', xuat=1, **request.args) }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-excel"></i> Xuất Excel</a>{% endif %}
+  </div>
+</div>
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link {{ 'active' if doi_tuong == 'khach_hang' }}" href="{{ url_for('congno.danh_sach', doi_tuong='khach_hang') }}"><i class="bi bi-person"></i> Khách hàng nợ</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if doi_tuong == 'nha_cung_cap' }}" href="{{ url_for('congno.danh_sach', doi_tuong='nha_cung_cap') }}"><i class="bi bi-truck"></i> Nợ nhà cung cấp</a></li>
+</ul>
+<div class="card">
+  <div class="card-body pb-0"><form class="row g-2 mb-3">
+    <input type="hidden" name="doi_tuong" value="{{ doi_tuong }}">
+    <div class="col-md-3"><input name="q" value="{{ request.args.q or '' }}" class="form-control" placeholder="Mã chứng từ"></div>
+    <div class="col-md-4">
+      {% if doi_tuong == 'khach_hang' %}
+      <select name="khach_hang_id" class="form-select"><option value="">-- Tất cả khách hàng --</option>
+        {% for k in khach_hangs %}<option value="{{ k.id }}" {{ 'selected' if request.args.khach_hang_id == k.id|string }}>{{ k.ma_kh }} - {{ k.ho_ten }}</option>{% endfor %}</select>
+      {% else %}
+      <select name="nha_cung_cap_id" class="form-select"><option value="">-- Tất cả NCC --</option>
+        {% for n in nccs %}<option value="{{ n.id }}" {{ 'selected' if request.args.nha_cung_cap_id == n.id|string }}>{{ n.ma_ncc }} - {{ n.ten_ncc }}</option>{% endfor %}</select>
+      {% endif %}</div>
+    <div class="col-md-3"><select name="trang_thai" class="form-select">
+      {% for k, v in [('con_no', 'Còn nợ'), ('qua_han', 'Quá hạn'), ('tat_toan', 'Đã tất toán'), ('tat_ca', 'Tất cả')] %}
+      <option value="{{ k }}" {{ 'selected' if loc == k }}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><button class="btn btn-primary"><i class="bi bi-search"></i> Lọc</button></div>
+  </form></div>
+  <div class="table-responsive"><table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>{{ 'Khách hàng' if doi_tuong == 'khach_hang' else 'Nhà cung cấp' }}</th><th>Chứng từ</th>
+      <th>Ngày phát sinh</th><th>Hạn thanh toán</th><th class="text-end">Số tiền</th><th class="text-end">Đã trả</th>
+      <th class="text-end">Còn lại</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>{% for c in ds %}{% set tt = c.trang_thai %}
+      <tr class="{{ 'table-danger' if c.qua_han }}"><td>{{ c.ten_doi_tuong }}</td>
+        <td>{{ c.ten_loai_chung_tu }} <b>{{ c.ma_chung_tu }}</b></td><td>{{ c.ngay_phat_sinh|ngay }}</td>
+        <td>{{ c.han_thanh_toan|ngay }}{% if c.qua_han %}<div class="small text-danger">Quá {{ c.so_ngay_qua_han }} ngày</div>{% endif %}</td>
+        <td class="text-end">{{ c.so_tien|vnd }}</td><td class="text-end">{{ c.da_thanh_toan|vnd }}</td>
+        <td class="text-end fw-bold">{{ c.con_lai|vnd }}</td><td><span class="badge bg-{{ tt[1] }}">{{ tt[0] }}</span></td>
+        <td class="text-end"><a href="{{ url_for('congno.chi_tiet', id=c.id) }}" class="btn btn-sm btn-outline-primary">
+          {% if c.con_lai > 0 %}{{ 'Thu nợ' if doi_tuong == 'khach_hang' else 'Trả nợ' }}{% else %}Xem{% endif %}</a></td></tr>
+    {% else %}<tr><td colspan="9" class="text-center text-muted py-4">Không có chứng từ công nợ.</td></tr>{% endfor %}</tbody>
+    {% if ds %}<tfoot><tr><th colspan="6" class="text-end">Tổng còn lại</th><th class="text-end text-danger">{{ tong_con_lai|vnd }}</th><th colspan="2"></th></tr></tfoot>{% endif %}
+  </table></div>
+</div>
+{% endblock %}
